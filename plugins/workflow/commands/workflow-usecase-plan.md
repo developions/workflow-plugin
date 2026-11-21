@@ -21,15 +21,81 @@ $ARGUMENTS
 ## 절대 규칙
 
 - **애매한 사항은 직접 결정하지 않는다.** 다음과 같은 정보가 계획서/코드에서 확정되지 않으면 AskUserQuestion으로 확인한다.
-  - 테스트 대상 Base URL (예: `http://localhost:8080`) 및 서버 기동 방법
-  - 로그인 계정/권한 등 사전 조건
+  - 실행 환경 설정 파일(아래 `실행 환경 설정`)이 없거나 값이 빠졌을 때: web·api URL, 서버 기동 방법과 health URL, 공통 로그인 절차
+  - 사용할 계정 역할(권한) 등 사전 조건
   - 테스트 데이터, 해상도, 포함할 시나리오 범위(정상/예외/권한)
   - 계획서에 화면으로 검증할 항목이 없을 때 계속 진행할지 여부
   - AskUserQuestion을 쓸 수 없는 환경(비대화형 실행 등)이면 추측으로 진행하지 말고, 질문 목록을 출력한 뒤 중단한다.
 - 이 커맨드에서 AskUserQuestion으로 받은 답은 질문·선택지·선택 결과를 **원본 작업계획서** `2. 결정 사항`에 한 행씩 추가한다. `단계`는 `usecase-plan`이다. 질문의 답이 아니라 사용자가 대화로 직접 준 지시·정정도 같은 표에 `usecase-plan · 대화 지시`로 남긴다. (형식은 계획서의 `결정 · 이력 기록 규칙`) `일시`는 답을 받은 시점이다. 기존 행은 고치거나 지우지 않는다.
   - 원본 계획서의 표가 예전 형식(결정 사항 3열, 작업 이력 2열 등)이면 형식을 올리지 말고, 그 표의 머리글에 맞춰 행을 쓴다. 형식 올리기는 `workflow-plan-review`나 `workflow-do`가 한다.
   - 원본 계획서에 결정 사항 표가 없으면 usecase 계획서 `5. 작업 이력`에 `결정: <질문> → <선택> (선택지: …)` 한 칸 형식으로 남긴다.
-- 비밀번호 등 민감 정보는 계획서에 평문으로 쓰지 않는다. `${환경변수명}` 또는 `(실행 시 입력)`으로 표기한다.
+- 계정 아이디·비밀번호는 usecase 문서와 공용 설정 파일 어디에도 쓰지 않는다. 문서에는 계정 역할(예: `admin`)과 자리표시자(`{account.id}`, `{account.password}`)만 쓴다. 이 커맨드는 `accounts.yaml`을 읽지 않는다.
+- URL·포트·서버 기동 명령·로그인 절차는 usecase 문서에 다시 적지 않는다. 실행 환경 설정 파일에 한 번만 두고, 문서에는 환경 이름과 web 기준 경로(`/login`)만 쓴다.
+
+## 실행 환경 설정
+
+테스트 실행 환경은 프로젝트의 `ai-work/usecase-env/`에 둔다. usecase 문서를 만들 때마다 URL·계정을 다시 묻지 않기 위해서다.
+
+| 파일 | git | 내용 | 누가 만드나 |
+|------|-----|------|-------------|
+| `environment.yaml` | 커밋 | 환경별 web·api URL, 서비스 기동 명령과 health URL, 공통 로그인 절차, 계정 역할(이름과 설명만) | 이 커맨드 (처음 한 번) |
+| `environment.local.yaml` | 제외 | 개인 PC에서만 다른 값 (포트 등). 공용 파일과 같은 키로 쓴 값만 덮어쓴다 | 사용자 (필요할 때만) |
+| `accounts.yaml` | 제외 | 환경·역할별 실제 아이디·비밀번호. **테스트 전용 계정만** 쓴다 | `workflow-usecase-do`가 뼈대를 만들고 사용자가 채움 |
+
+- 병합 규칙: `environment.local.yaml`의 값이 같은 키의 공용 값을 덮어쓴다. 목록(`services`, `login.steps`)은 항목별로 합치지 않고 통째로 바꾼다.
+- 같은 이름의 개인 파일을 쓰는 다른 플러그인과 섞이지 않도록 이 플러그인의 작업 폴더(`ai-work/`) 아래에 둔다.
+
+### environment.yaml 형식
+```yaml
+# workflow-usecase-plan / workflow-usecase-do 가 쓰는 테스트 실행 환경 (공용, 커밋한다)
+# 비밀값은 쓰지 않는다. 계정 실제 값은 accounts.yaml(커밋 금지)에 둔다.
+# 개인 PC에서만 다른 값은 environment.local.yaml(커밋 금지)에 같은 키로 덮어쓴다.
+default: local
+
+environments:
+  local:
+    web: http://localhost:8080        # 화면 기준 URL. usecase의 navigate 경로는 이 URL 기준이다
+    api: http://localhost:8080        # API 기준 URL (network 단계 확인용)
+    services:                         # usecase의 "필요 서비스" 이름과 같아야 한다
+      - name: app
+        health: http://localhost:8080/actuator/health
+        start: ./gradlew bootRun      # 저장소 루트 기준. Claude가 띄우면 안 되는 서비스는 start를 생략한다
+  # dev:                              # 공용 서버는 start 없이 health만 적는다
+  #   web: https://dev.example.com
+  #   api: https://dev.example.com
+  #   services:
+  #     - name: app
+  #       health: https://dev.example.com/actuator/health
+
+# 공통 로그인 절차. usecase의 login 단계가 이 절차를 그 역할의 계정으로 실행한다.
+# 형식: "액션 | 대상 | 값 / 기대결과" (usecase 단계 표기와 같다)
+# 로그인 화면이 없으면 enabled: false
+login:
+  enabled: true
+  steps:
+    - 'navigate | /login | -'
+    - 'type | textbox "아이디" | {account.id}'
+    - 'type | textbox "비밀번호" | {account.password}'
+    - 'click | button "로그인" | -'
+    - 'wait | text "로그아웃" | 나타남'
+
+# 계정 역할. 실제 값은 accounts.yaml에 같은 역할 키로 둔다.
+accounts:
+  admin: 관리자
+  user: 일반 사용자
+```
+
+### 처음 만들기
+`environment.yaml`이 없을 때만 한다.
+1. 코드(설정 파일, README, `application.yml`, `package.json` 등)에서 web·api URL, 기동 명령, health URL, 로그인 화면 요소를 찾는다.
+2. 찾지 못했거나 후보가 여럿인 값을 3단계 질문에 넣어 확인한다.
+3. 위 형식으로 `environment.yaml`을 만든다. 확인하지 못한 값은 `# TODO 확인 필요` 주석을 붙인다.
+4. 두 개인 파일이 git에서 무시되는지 `git check-ignore -q ai-work/usecase-env/accounts.yaml`(`environment.local.yaml`도 같은 방법)로 확인한다. 무시되지 않으면(종료 코드 1) `ai-work/`가 있는 디렉토리의 `.gitignore`에 아래 두 줄을 추가한다. (`.gitignore`가 없으면 만든다)
+   ```
+   ai-work/usecase-env/environment.local.yaml
+   ai-work/usecase-env/accounts.yaml
+   ```
+- 이미 있으면 URL·기동 방법·로그인 절차는 묻지 않는다. 이 usecase에 필요한 계정 역할이나 서비스가 `environment.yaml`에 없을 때만 3단계에서 확인하고 추가한다. (역할은 이름과 설명만 쓴다)
 - usecase의 각 단계는 Playwright MCP 도구로 **그대로 실행 가능한 수준**으로 구체적으로 쓴다. ("확인한다" 같은 모호한 표현 대신 무엇을, 어떤 값으로 확인하는지 명시)
 - 이 커맨드는 **계획서 작성까지만** 수행한다. 브라우저를 실행하지 않는다. 커밋은 원본 작업계획서의 `커밋 방식`을 따르고(처리 절차 7), push는 하지 않는다.
 
@@ -49,6 +115,7 @@ $ARGUMENTS
      - 답은 작업계획서 `2. 결정 사항`에 `usecase-plan · 브랜치`로 기록한다.
    - 취소선 줄(취소·병합된 항목)은 검증 대상이 아니다. 매핑에 취소된 ID를 쓰지 않고, 병합된 항목은 남은 ID로 매핑한다.
    - `(미결)`이 붙은 항목은 여기서 확정하지 않는다. (계획서 본문을 고치는 일은 `workflow-do`·`workflow-plan-review`가 한다) 그 항목을 검증하는 UC는 `(가정)`으로 쓰고 완료 보고에 알린다.
+   - `ai-work/usecase-env/environment.yaml`을 읽는다. (`environment.local.yaml`·`accounts.yaml`은 읽지 않는다) 없으면 `실행 환경 설정`의 `처음 만들기`를 따른다. 있으면 어느 환경으로 쓸지(`default` 값이 기본) 정하고, 환경이 여러 개면 3단계에서 확인한다.
    - `ai-work/usecases`에서 `원본 작업계획서`가 이 계획서인 usecase 계획서가 이미 있는지 찾는다. 있으면 새로 쓸지 기존 문서를 갱신할지 3단계 질문에 함께 넣는다. (아래 `기존 문서 갱신` 참고)
 2. 관련 화면 소스(라우트, 템플릿/컴포넌트, 폼 필드, 버튼 라벨, API 엔드포인트)를 탐색하여 실제 URL 경로와 화면 요소(라벨/텍스트/role)를 확인한다.
    - 아직 구현되지 않은 화면은 계획서 내용을 기준으로 쓰되 대상 칸에 `(가정)`을 붙인다.
@@ -80,7 +147,7 @@ $ARGUMENTS
    - 질문: 선택지는 커밋 메시지 초안을 보여 주고 `커밋 (Recommended)` / `커밋하지 않음`
      - 원본 계획서에 실행 전부터 미커밋 변경이 있었으면 질문 본문에 그 변경도 함께 커밋된다는 것을 적는다. (파일 단위로 스테이징하기 때문이다)
      - 답은 원본 작업계획서 `2. 결정 사항`에 `usecase-plan`으로 기록한 뒤 커밋한다.
-   - 이번 실행에서 만들거나 고친 usecase 계획서와 원본 작업계획서만 스테이징한다. (`git add -A` 쓰지 않음)
+   - 이번 실행에서 만들거나 고친 usecase 계획서, 원본 작업계획서, `ai-work/usecase-env/environment.yaml`, `.gitignore`만 스테이징한다. (`git add -A` 쓰지 않음) `environment.local.yaml`·`accounts.yaml`은 절대 넣지 않는다.
    - push는 하지 않는다.
 
 ## 상태 표기 · 진행률 규칙
@@ -106,7 +173,8 @@ $ARGUMENTS
 
 | 액션 | MCP 도구 | 표기 예 |
 |------|----------|---------|
-| navigate | browser_navigate | 대상 `/login` (Base URL 기준 경로) |
+| login | (공통 로그인 절차) | 대상 계정 역할 `admin`. `environment.yaml`의 `login.steps`를 그 역할의 계정으로 실행 |
+| navigate | browser_navigate | 대상 `/login` (환경의 web URL 기준 경로) |
 | back | browser_navigate_back | 대상 `-` |
 | click | browser_click | 대상 button "로그인" |
 | hover | browser_hover | 대상 menuitem "설정" |
@@ -123,6 +191,8 @@ $ARGUMENTS
 | screenshot | browser_take_screenshot | 값 `01-06.png` (파일명만 쓴다) |
 
 - 대상은 가능한 한 **role + 접근 가능한 이름(라벨/텍스트)** 으로 지정한다. (예: button "저장", textbox "이메일")
+- 로그인이 필요한 UC는 첫 단계를 `login`으로 쓴다. 로그인 화면 자체를 검증하는 UC가 아니면 로그인 단계를 풀어 쓰지 않는다. `login.enabled`가 `false`이면 `login` 단계를 쓰지 않는다.
+- 계정 값은 `{account.id}`, `{account.password}`로만 쓴다. 로그인 화면을 직접 검증하는 UC에서 `type` 값으로 쓸 때도 같다.
 - 표에 없는 동작(드래그, 탭 전환 등)은 해당 Playwright MCP 도구 이름에서 `browser_`를 뺀 것을 액션으로 쓴다. (예: `drag`, `tabs`)
 - 단계 ID는 `UC번호-순번`(`01-01`)으로 문서 전체에서 유일하게 매긴다. 실행 중 행 단위로 상태를 고치므로 같은 내용의 행이 여러 UC에 있어도 구분되어야 한다.
 - 스크린샷 파일명은 `단계ID.png`로 쓴다. 저장 디렉토리는 실행할 때 정해진다. (템플릿의 표기 규칙 참고)
@@ -137,7 +207,7 @@ $ARGUMENTS
 | 작성일시 | YYYY-MM-DD HH:MI:SS |
 | 원본 작업계획서 | `ai-work/plans/YYMMDD/HHMISS_xxx.md` |
 | 작업 브랜치 | `feature/xxx` |
-| Base URL | http://localhost:8080 |
+| 환경 | local |
 | 해상도 | 1920x1080 |
 | 작업상태 | 대기 |
 | 전체진행률 | 0% (0/N) |
@@ -152,11 +222,13 @@ $ARGUMENTS
 > - 전체진행률 = `[V]` 단계 수 ÷ 전체 단계 수 × 100, 소수점 버림. 진행률 바는 10%당 `■` 1칸.
 > - 작업상태: 대기(`[V]`·`[~]`·`[X]` 모두 0개) / 완료(모든 단계 `[V]`) / 진행(그 외)
 > - 표 칸 안의 `|`는 `\|`로 쓴다. (그대로 쓰면 표가 깨진다)
+> - URL·서버 기동·로그인 절차는 `ai-work/usecase-env/environment.yaml`의 `환경` 값을 따른다. 이 문서에는 web 기준 경로와 계정 역할만 쓰고, 계정 실제 값은 쓰지 않는다.
 > - 실행은 `/workflow:workflow-usecase-do @<이 파일>`로 한다. 증적은 이 파일 경로에서 `.md`를 뺀 `..._evidence/<실행 YYMMDD_HHMISS>/`에 저장된다.
 
 ## 1. 사전 조건
-- 서버 기동: `실행 명령`
-- 계정: `${TEST_USER_ID}` / `${TEST_USER_PW}` (환경변수) 또는 `(실행 시 입력)`
+- 실행 환경: `ai-work/usecase-env/environment.yaml`의 `local` (URL·서버 기동·로그인 절차는 이 파일을 따른다)
+- 필요 서비스: app (`environment.yaml`의 `services` 이름 중 이 usecase에 필요한 것)
+- 계정 역할: admin (실제 값은 `ai-work/usecase-env/accounts.yaml`)
 - 테스트 데이터: ...
 
 ## 2. 작업계획서 매핑
@@ -167,18 +239,18 @@ $ARGUMENTS
 ## 3. Usecase
 
 ### UC-01. [시나리오명] — 대기 (0%)
-<!-- 아래 로그인 단계는 (예시)다. 실제 시나리오로 바꾼다 -->
+<!-- 아래 단계는 (예시)다. 실제 시나리오로 바꾼다 -->
 - 목적: ...
 - 유형: 정상 / 예외 / 권한
+- 계정 역할: admin
 
 | 상태 | 단계 | 액션 | 대상 | 값 / 기대결과 |
 |------|------|------|------|---------------|
-| [ ] | 01-01 | navigate | `/login` | 로그인 화면 표시 |
-| [ ] | 01-02 | type | textbox "아이디" | `${TEST_USER_ID}` |
-| [ ] | 01-03 | type | textbox "비밀번호" | `${TEST_USER_PW}` |
-| [ ] | 01-04 | click | button "로그인" | - |
-| [ ] | 01-05 | assert | text "메인" | 표시됨 |
-| [ ] | 01-06 | screenshot | - | `01-06.png` |
+| [ ] | 01-01 | login | admin | 공통 로그인 절차 성공 |
+| [ ] | 01-02 | navigate | `/members` | 회원 목록 화면 표시 |
+| [ ] | 01-03 | click | button "등록" | - |
+| [ ] | 01-04 | assert | text "회원 등록" | 표시됨 |
+| [ ] | 01-05 | screenshot | - | `01-05.png` |
 
 - 기대 결과 요약: ...
 
@@ -200,7 +272,8 @@ $ARGUMENTS
 - **작업 브랜치**: 원본 작업계획서의 값을 그대로 옮긴다.
 - **2. 작업계획서 매핑**: 원본 계획서의 항목 ID(`1.2`, `DoD-1`)로 쓴다. 실행 후 통과 여부를 원본 계획서에 반영할 때 이 표를 쓴다.
 - **표기 규칙 블록**은 빼지 않고 그대로 넣는다.
-- **예시**: 템플릿의 로그인 단계와 `UC-01 | 1.2, DoD-1` 매핑은 예시다. 실제 시나리오와 항목 ID로 바꾼다.
+- **환경**: `environment.yaml`의 환경 이름을 쓴다. (기본은 `default` 값)
+- **예시**: 템플릿의 UC-01 단계와 `UC-01 | 1.2, DoD-1` 매핑은 예시다. 실제 시나리오와 항목 ID로 바꾼다.
 
 ## 기존 문서 갱신
 같은 원본 계획서의 usecase 계획서가 이미 있고 갱신하기로 했을 때만 적용한다. `workflow-usecase-do`가 그대로 실행할 수 있도록 다음 범위 안에서만 고친다.
@@ -212,12 +285,14 @@ $ARGUMENTS
 - `4. 실행 결과`와 `6. 실패 상세`는 그대로 둔다.
 - 상단 표의 전체진행률·작업상태·`최종 갱신`, 진행률 바, UC 제목의 상태/진행률을 다시 계산한다.
 - `5. 작업 이력`에 갱신 내용을 한 행 남긴다. (예: `갱신: UC-03 추가, 매핑 2건 수정, (가정) 4건 해소`)
+- 기존 문서가 예전 형식(상단 표에 `Base URL` 행, 계정을 `${환경변수}`·`(실행 시 입력)`으로 표기)이면 그 형식은 그대로 둔다. (`workflow-usecase-do`가 예전 형식도 실행한다) 새 형식으로 바꾸려면 새 문서로 작성하자고 권한다.
 - 기존 단계를 없애야 하는 등 이 범위를 넘는 변경이 필요하면 새 문서로 작성하자고 권하고 사용자에게 확인한다.
 
 ## 완료 보고
 - 생성된 usecase 계획서 경로
 - UC 수, 전체 단계 수
-- 확정한 사전 조건(Base URL, 계정 처리 방식 등)
+- 사용할 환경, 필요 서비스, 계정 역할
+- 실행 환경 설정 파일을 새로 만들었거나 고쳤으면 그 내용(`# TODO 확인 필요` 항목 포함)과 `.gitignore` 추가 여부. 각자 `accounts.yaml`(포트 등이 다르면 `environment.local.yaml`도)을 채워야 한다는 점과, 테스트 전용 계정만 쓰라는 점
 - 새로 작성했는지 기존 문서를 갱신했는지 (갱신했으면 바뀐 내용)
 - `(가정)`으로 쓴 요소가 있으면 그 목록과, 구현 후 실제 화면 기준으로 고쳐야 한다는 점
 - 원본 계획서의 `(미결)` 때문에 `(가정)`으로 쓴 UC

@@ -48,6 +48,23 @@ workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─�
 - `workflow-usecase-do`는 서버가 다른 코드로 떠 있을 수 있어 브랜치를 직접 바꾸지 않는다. 중단하거나, 계속하면 결과에 `브랜치 불일치`를 표시하고 원본 계획서에 반영하지 않는다.
 - 전환이 실패하면(미커밋 변경 충돌 등) stash나 강제 전환 없이 중단한다.
 
+## usecase 실행 환경 (URL · 계정)
+
+URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 `ai-work/usecase-env/`에 한 번만 둔다. usecase 문서에는 환경 이름(`local`), web 기준 경로(`/login`), 계정 역할(`admin`)만 쓴다.
+
+| 파일 | git | 내용 |
+|------|-----|------|
+| `environment.yaml` | 커밋 | 환경별 web·api URL, 서비스 기동 명령·health URL, 공통 로그인 절차, 계정 역할(이름·설명만) |
+| `environment.local.yaml` | 제외 | 개인 PC에서만 다른 값(포트 등). 같은 키만 덮어쓴다 |
+| `accounts.yaml` | 제외 | 환경·역할별 실제 아이디·비밀번호 |
+
+- `workflow-usecase-plan`이 `environment.yaml`이 없을 때 처음 한 번 코드와 질문으로 만들고, 두 개인 파일을 `.gitignore`에 넣는다. 이후에는 URL·계정을 다시 묻지 않는다. `accounts.yaml`은 읽지 않는다.
+- `workflow-usecase-do`는 두 파일을 합쳐 환경을 정하고, `health` URL로 서버를 확인한다. 떠 있지 않으면 `start` 명령으로 띄울지 묻는다.
+- `accounts.yaml`이 없으면 `workflow-usecase-do`가 역할 키만 있는 뼈대를 만든다. 값은 사용자가 파일에 직접 채운다. (비밀번호를 대화창으로 받지 않는다)
+- usecase의 `login` 단계는 `environment.yaml`의 공통 로그인 절차를 그 역할의 계정으로 실행한다. UC마다 로그인 단계를 풀어 쓰지 않는다.
+- **테스트 전용 계정만 쓴다.** Playwright MCP로 입력하는 값은 대화 내용을 거쳐 모델에 전달된다. 증적 스크린샷에도 아이디가 찍힐 수 있으니 외부로 공유할 때 주의한다.
+- `Base URL`·`${환경변수}`로 쓴 예전 usecase 문서도 `workflow-usecase-do`가 그대로 실행한다.
+
 ## 계획 작성 순서 (workflow-plan)
 
 컨텍스트 파악(기준 브랜치 확인 포함) → 애매한 사항 확인 → 설계안 비교 → 상세 설계와 남은 사항 확인 → 브랜치 생성 → 파일 경로 결정 → 계획서 작성
@@ -89,7 +106,7 @@ workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─�
 | `(단독 커밋)` 항목 완료 | `workflow-do` | 그 항목의 소스 + 계획서 (DB 마이그레이션, 파일 삭제 등) |
 | `/simplify`, `/code-review` 반영 각각 | `workflow-do` | 정리·리뷰 반영 소스 + 계획서 |
 | 종료 처리 | `workflow-do` | 아직 커밋하지 않은 이번 실행의 변경 (완료 기준 확인 등) |
-| usecase 작성 후 | `workflow-usecase-plan` | usecase 문서 + 원본 계획서 |
+| usecase 작성 후 | `workflow-usecase-plan` | usecase 문서 + 원본 계획서 (+ 처음 만든 `environment.yaml`, `.gitignore`) |
 | usecase 실행 후 | `workflow-usecase-do` | usecase 문서 + 원본 계획서 + `.gitignore` (브랜치 불일치면 커밋하지 않는 것을 추천) |
 
 - Phase는 커밋 단위이므로 `workflow-plan`은 Phase가 끝났을 때 빌드·테스트가 통과하도록 나누고, 되돌리기 어려운 항목에 `(단독 커밋)`을 붙인다.
