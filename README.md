@@ -60,7 +60,7 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
 
 | skill | 설명 | 부르는 곳 |
 |-------|------|-----------|
-| `workflow:db-design` | DB 변경(테이블·컬럼·제약·인덱스·마이그레이션)을 설계·점검하는 기준과 `### DB 변경` 형식 | `workflow-plan`(설계), `workflow-plan-review`(점검 계획. 정의를 새로 쓰거나 다시 쓸 때 설계), `workflow-do`(점검 구현. 설계 방향이 바뀔 때 설계) |
+| `workflow:db-design` | DB 변경(테이블·컬럼·제약·인덱스·마이그레이션)을 설계·점검하는 기준과 `### DB 변경` 형식 | `workflow-plan`(설계), `workflow-plan-review`(점검 계획. 정의를 새로 쓰거나 다시 쓸 때 설계), `workflow-do`(점검 구현 — skill을 부르지 않고 `3. 점검 모드` 섹션만 읽는다. 설계 방향이 바뀔 때 설계) |
 | `workflow:api-design` | API 변경(엔드포인트·요청·응답·오류 코드·권한·하위 호환)을 설계·점검하는 기준과 `### API 변경` 형식 | 위와 같음 |
 | `workflow:ui-design` | 화면 변경(경로·요소·입력 검증·메시지·상태·권한별 노출·이동)을 설계·점검하는 기준과 `### 화면 변경` 형식. 시각 디자인은 다루지 않는다 | 위와 같음. `workflow-usecase-plan`은 이 정의의 요소 이름·문구를 usecase 대상·기대결과로 쓴다 |
 
@@ -117,7 +117,7 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
 | 파일 | 설명 | 쓰는 곳 |
 |------|------|---------|
 | `templates/plan-template.md` | 작업계획서 템플릿 (`진행 관리 규칙`·`결정 · 이력 기록 규칙` 블록 포함) | `workflow-plan`(작성), `workflow-do`·`workflow-plan-review`(예전 형식 계획서 올리기) |
-| `scripts/plan-progress.sh` | 체크 표기를 세어 진행률·진행률 바·작업상태·Phase/UC 제목이 맞는지 확인한다. 다른 곳만 `적힌 값 → 맞는 값`으로 출력하고, 파일은 고치지 않는다 (종료 코드 1은 실행 오류일 때만) | 계획서를 고치는 커맨드 모두와 `usecase-runner` (`진행 표시 확인`), `workflow-status`(현황 조회) |
+| `scripts/plan-progress.sh` | 체크 표기를 세어 진행률·진행률 바·작업상태·Phase/UC 제목이 맞는지 확인한다. 다른 곳만 `적힌 값 → 맞는 값`으로 출력한다. 기본은 파일을 고치지 않고, `--fix`를 주면 그 값으로 고친다 (체크 표기의 상태와 `최종 갱신`은 고치지 않음. 종료 코드 1은 실행 오류일 때만) | 계획서를 고치는 커맨드 모두와 `usecase-runner` (`진행 표시 확인`), `workflow-status`(현황 조회) |
 
 - 스크립트는 bash로 실행한다. (Windows는 Git Bash) bash가 없으면 커맨드가 예전처럼 직접 센다. 직접 실행할 수도 있다: `bash plugins/workflow/scripts/plan-progress.sh ai-work/plans/YYMMDD/HHMISS_xxx.md`
 - `.sh` 파일은 `.gitattributes`로 LF로 고정한다. (CRLF로 받으면 bash에서 깨진다)
@@ -207,7 +207,7 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 | Phase 완료 | `workflow-do` | 그 Phase의 소스 + 계획서 |
 | `(단독 커밋)` 항목 완료 | `workflow-do` | 그 항목의 소스 + 계획서 (DB 마이그레이션, 파일 삭제 등) |
 | `/simplify`, `/code-review` 반영 각각 | `workflow-do` | 정리·리뷰 반영 소스 + 계획서 |
-| 종료 처리 | `workflow-do` | 아직 커밋하지 않은 이번 실행의 변경 (완료 기준 확인 등) |
+| 종료 처리 | `workflow-do` | 아직 커밋하지 않은 이번 실행의 변경 (`do 종료` 기록, 완료 기준 확인 등). 이번 실행의 마지막 커밋 시점이 종료 바로 앞이면 그 커밋을 여기로 미뤄 `do 종료` 기록과 한 커밋으로 한다 |
 | usecase 작성 후 | `workflow-usecase-plan` | usecase 문서 + 원본 계획서 (+ 처음 만든 `environment.yaml`, `.gitignore`) |
 | usecase 실행 후 | `workflow-usecase-do` | usecase 문서 + 원본 계획서 + `.gitignore` (브랜치 불일치면 커밋하지 않는 것을 추천) |
 
@@ -241,5 +241,5 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
   - 작업계획서: 작업항목 + 완료 기준(`DoD-n`)
   - usecase 계획서: 전체 단계 수
 - 작업상태: 대기(시작한 항목 없음) / 진행 / 완료(모든 항목 `[V]`)
-- 커맨드는 이 값들을 손으로 다시 세지 않고 `scripts/plan-progress.sh`로 확인한다. `workflow-do`는 항목이 `[V]`가 될 때마다, `workflow-usecase-do`는 UC가 끝날 때마다 실행한다.
+- 커맨드는 이 값들을 손으로 다시 세지 않고 `scripts/plan-progress.sh`로 확인한다. `workflow-do`는 항목이 `[V]`가 될 때마다 `--fix`로 실행해 스크립트가 바로 고치게 하고, `workflow-usecase-do`는 UC가 끝날 때마다 실행한다.
 - 애매한 사항은 모든 커맨드에서 AskUserQuestion으로 확답을 받는다.
