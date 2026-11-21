@@ -51,6 +51,7 @@ tools: Read, Write, Edit, Glob, Grep
 바꾼 파일
 - 추가 `src/.../MemberQueryController.java`
 - 수정 `src/.../MemberQueryService.java`
+- 추가 `src/test/.../MemberQueryServiceTest.java`
 구현 요약
 - GET /api/members/{id} 추가, 없으면 404 MEMBER_NOT_FOUND
 정의 대응
@@ -58,7 +59,7 @@ tools: Read, Write, Edit, Glob, Grep
 직접 정한 것
 - id가 숫자가 아니면 404로 처리 (정의 표에 400 오류가 없음. 근거: 같은 컨트롤러의 기존 조회 API `MemberController.java:40`)
 검증할 것
-- MemberQueryServiceTest (새로 작성, 실행 안 함)
+- MemberQueryServiceTest (새로 작성, 실행 안 함. 위 `바꾼 파일`에 있음)
 - 2.2와 공유하는 MemberDto는 고치지 않았다 (목록 밖)
 
 확인 필요
