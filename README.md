@@ -5,12 +5,43 @@
 ## 설치
 
 ```
-/plugin marketplace add C:\intellij\workspace_workflow
+/plugin marketplace add developions/workflow-plugin
 /plugin install workflow@workspace-workflow
 ```
 
 - 설치 후 Claude Code를 재시작하거나 `/reload-plugins`를 실행한다.
-- 로컬 경로로 추가한 marketplace의 플러그인은 복사되지 않고 이 디렉토리에서 바로 로드된다. 커맨드 파일을 고친 뒤에는 재시작이나 `/reload-plugins`만 하면 된다.
+- `@` 뒤는 저장소 이름이 아니라 `.claude-plugin/marketplace.json`의 `name`(`workspace-workflow`)이다.
+- 저장소를 내려받아 고치면서 쓸 때는 로컬 경로로 추가할 수도 있다: `/plugin marketplace add <저장소 경로>`. 로컬 경로로 추가한 marketplace의 플러그인은 복사되지 않고 그 디렉토리에서 바로 로드된다. 파일을 고친 뒤에는 재시작이나 `/reload-plugins`만 하면 된다.
+- 팀 프로젝트에서 자동으로 설치되게 하려면 그 프로젝트의 `.claude/settings.json`에 넣는다.
+
+  ```json
+  {
+    "extraKnownMarketplaces": {
+      "workspace-workflow": { "source": { "source": "github", "repo": "developions/workflow-plugin" } }
+    },
+    "enabledPlugins": { "workflow@workspace-workflow": true }
+  }
+  ```
+
+## 버전 올리기 (GitHub로 배포할 때)
+
+GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspace-workflow/workflow/<버전>/`에 **버전별로 복사**된다. 버전 번호가 같으면 파일을 고쳐 push하고 marketplace를 업데이트해도 설치본이 바뀌지 않는다. (`/plugin update`가 `already at the latest version`이라고 나온다)
+
+고친 내용을 배포할 때마다:
+
+1. 두 파일의 버전을 같은 값으로 올린다.
+   - `plugins/workflow/.claude-plugin/plugin.json`의 `version`
+   - `.claude-plugin/marketplace.json`의 `metadata.version`과 `plugins[].version`
+   - 기준: 커맨드·skill·agent의 동작이 바뀌면 minor(`1.1.0` → `1.2.0`), 문구 수정·버그 수정만이면 patch(`1.1.0` → `1.1.1`). 이전 계획서와 호환되지 않게 형식을 바꾸면 major.
+   - 새 커맨드·skill·agent를 추가했으면 `marketplace.json`·`plugin.json`의 `description`도 함께 고친다.
+2. 커밋하고 GitHub `main`에 push한다. (버전을 올린 커밋이 push되어 있어야 한다)
+3. 쓰는 쪽에서 받는다.
+   ```
+   /plugin marketplace update workspace-workflow
+   /reload-plugins
+   ```
+   - marketplace 업데이트 결과에 `1 plugin bumped`가 나오면 새 버전을 받은 것이다. 나오지 않으면 `/plugin update workflow@workspace-workflow`를 실행한다.
+4. 새 버전이 설치됐는지 확인하려면 `~/.claude/plugins/cache/workspace-workflow/workflow/` 아래에 새 버전 폴더가 생겼는지 본다. `~/.claude/plugins/marketplaces/workspace-workflow/`는 marketplace 저장소의 사본일 뿐, 실제로 실행되는 설치본이 아니다.
 - `workflow-usecase-do`는 Playwright MCP가 설치되어 있어야 한다.
 - 커맨드는 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다) skill 세 개(`db-design`, `api-design`, `ui-design`)는 예외다. 커맨드가 Skill 도구로 불러야 하므로 Claude가 부를 수 있게 열어 두었다. (아래 `skill` 참고)
 
