@@ -33,7 +33,8 @@ workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─�
 ```
 
 - `workflow-do`는 구현 전에 계획서의 미결 사항(`(미결)` 표시, 비어 있거나 `미정`·`보류`인 결정, 조치가 `미결`인 리뷰 지적 등)을 찾아 AskUserQuestion으로 확정하고 계획서를 고친 뒤 진행한다. 보류한 사항에 걸린 항목은 그 실행에서 건너뛴다.
-- `workflow-do`는 계획서의 `진행 관리 규칙`에 따라 항목마다 `[~]` → `[V]`로 갱신하며 구현한다. 중단된 경우 같은 커맨드로 이어서 진행한다. 커밋은 끝난 뒤 묻고, push는 하지 않는다.
+- `workflow-do`는 계획서의 `진행 관리 규칙`에 따라 항목마다 `[~]` → `[V]`로 갱신하며 구현한다. 중단된 경우 같은 커맨드로 이어서 진행한다. 커밋은 Phase 단위로 계획서의 `커밋 방식`(기본 `자동`)에 따라 하고(아래 `git 처리`), push는 하지 않는다.
+- 작업항목이 모두 끝나면 `workflow-do`가 완료 기준을 확인한다. 명령 기준이 실패하거나 사람이 판단한 기준이 미충족이면 수정 작업항목을 추가할지 묻고, 사람이 판단하는 기준은 사용자 확인을 받아 `[V]`로 바꾼다. 작업항목이 모두 `[V]`여도 남은 완료 기준이 있으면 다시 실행해 확인할 수 있다.
 - 소스 코드를 바꾸는 계획에는 마지막 Phase로 `코드 정리 및 리뷰`가 들어간다. `workflow-do`가 Claude Code의 `/simplify`로 코드를 정리하고, `/code-review medium`으로 리뷰한 뒤 지적 사항 중 반영할 것을 사용자가 고르게 한다.
 - usecase 실패를 고칠 때도 `workflow-do`에 수정 내용을 추가 지시로 넣어 진행할 수 있다.
 - `workflow-usecase-plan`은 구현 전에 먼저 써 둘 수도 있다. 이때 확인되지 않은 화면 요소에는 `(가정)`이 붙는다.
@@ -41,10 +42,20 @@ workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─�
 
 ## 작업 브랜치
 
+- `workflow-plan`은 코드를 탐색하기 전에 기준 브랜치를 확인한다. 기본 브랜치가 아닌 곳에서 실행하면 어느 브랜치 코드를 기준으로 계획할지 먼저 묻고, 그 위치에서 작업 브랜치를 만든다.
 - `workflow-plan`이 만든(또는 고른) 브랜치가 계획서 상단 표의 `작업 브랜치`에 기록되고, 이후 모든 커맨드는 이 브랜치에서 실행된다.
 - `workflow-plan-review`, `workflow-do`, `workflow-usecase-plan`은 시작할 때 현재 브랜치를 확인한다. 다르면 전환 / 중단을 묻는다. `workflow-plan-review`·`workflow-do`는 `현재 브랜치에서 진행`(계획서의 작업 브랜치를 바꾸고 이력 기록)도 고를 수 있다.
 - `workflow-usecase-do`는 서버가 다른 코드로 떠 있을 수 있어 브랜치를 직접 바꾸지 않는다. 중단하거나, 계속하면 결과에 `브랜치 불일치`를 표시하고 원본 계획서에 반영하지 않는다.
 - 전환이 실패하면(미커밋 변경 충돌 등) stash나 강제 전환 없이 중단한다.
+
+## 계획 작성 순서 (workflow-plan)
+
+컨텍스트 파악(기준 브랜치 확인 포함) → 애매한 사항 확인 → 설계안 비교 → 상세 설계와 남은 사항 확인 → 브랜치 생성 → 파일 경로 결정 → 계획서 작성
+
+- 설계안을 고른 뒤 그 안만 구체화하고, 그 과정에서 나온 질문을 계획서를 쓰기 전에 모두 확인한다.
+- 기존 기능의 동작을 바꾸면 `1. 요구사항` 아래 `현재 동작 → 변경 후 동작` 표를 코드 근거와 함께 쓰고, 바뀌는 코드의 호출부와 옛 동작을 검증하는 기존 테스트를 찾아 영향 범위·작업항목·완료 기준에 넣는다. `workflow-plan-review`도 이것을 점검한다.
+- API나 DB가 바뀌면 `4. 영향 범위` 아래 `DB 변경`·`API 변경` 정의 표를 쓴다. `workflow-plan-review`는 이 표를 점검하고, `workflow-do`는 구현 기준으로, `workflow-usecase-plan`은 `network` 검증 기준으로 쓴다.
+- engineering plugin이 설치되어 있으면 필요한 단계에서 `system-design`·`architecture`·`testing-strategy`·`deploy-checklist` skill의 점검 관점을 가져와 쓴다. 설치되어 있지 않으면 그대로 진행한다.
 
 ## 설계안 비교
 
@@ -62,6 +73,40 @@ workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─�
 ## git 처리
 
 - 작업계획서와 usecase 계획서(`ai-work/plans`, `ai-work/usecases`의 `.md`)는 커밋 대상이다. 커맨드는 이 파일들을 `.gitignore`에 넣지 않는다.
+- 커밋은 계획서 상단 표의 `커밋 방식`을 따른다. `workflow-plan`이 브랜치 질문과 함께 한 번 묻고, 이후 모든 커맨드가 이 값을 쓴다.
+  - `자동`(추천): 아래 시점마다 묻지 않고 커밋하고 `커밋 <해시> <제목>` 한 줄로 알린다.
+  - `확인`: 시점마다 묻는다. `커밋 방식` 행이 없는 예전 계획서도 `확인`으로 동작한다.
+  - `끝에 한꺼번에`: 각 커맨드가 끝날 때만 묻는다.
+  - `자동`이어도 작업 브랜치가 기본 브랜치일 때, 시작 전부터 미커밋 변경이 있던 파일이 섞일 때, 검증이 끝나지 않은(`[~]`) 변경이 섞일 때, 비밀값 파일로 보이는 파일이 있을 때, 커밋 훅이 실패했을 때, usecase를 작업 브랜치가 아닌 곳에서 실행했을 때는 묻는다.
+  - 바꾸려면 `workflow-do`에 추가 지시로 준다. (예: `/workflow:workflow-do @<계획서> 커밋 방식을 확인으로 바꿔줘`)
+- 그 커맨드가 만들거나 고친 파일만 스테이징하고(`git add -A` 쓰지 않음), push는 하지 않는다. 프로젝트 규칙(CLAUDE.md 등)에 커밋 형식이 있으면 그것을 따르고, 없으면 본문 끝에 `Plan: <계획서 경로>`를 붙인다.
+
+| 시점 | 커맨드 | 커밋 내용 |
+|------|--------|-----------|
+| 계획서 작성 후 | `workflow-plan` | 계획서 |
+| 리뷰 반영 후 | `workflow-plan-review` | 계획서 |
+| Phase 완료 | `workflow-do` | 그 Phase의 소스 + 계획서 |
+| `(단독 커밋)` 항목 완료 | `workflow-do` | 그 항목의 소스 + 계획서 (DB 마이그레이션, 파일 삭제 등) |
+| `/simplify`, `/code-review` 반영 각각 | `workflow-do` | 정리·리뷰 반영 소스 + 계획서 |
+| 종료 처리 | `workflow-do` | 아직 커밋하지 않은 이번 실행의 변경 (완료 기준 확인 등) |
+| usecase 작성 후 | `workflow-usecase-plan` | usecase 문서 + 원본 계획서 |
+| usecase 실행 후 | `workflow-usecase-do` | usecase 문서 + 원본 계획서 + `.gitignore` (브랜치 불일치면 커밋하지 않는 것을 추천) |
+
+- Phase는 커밋 단위이므로 `workflow-plan`은 Phase가 끝났을 때 빌드·테스트가 통과하도록 나누고, 되돌리기 어려운 항목에 `(단독 커밋)`을 붙인다.
+- `확인` 방식의 커밋 질문에서 `이번 실행은 끝에 한꺼번에`를 고르면 그 실행에서는 종료 처리에서만 묻는다. `workflow-do` 시작 전부터 있던 미커밋 변경은 커밋에 넣지 않는다.
+- 자동 커밋은 push 전이면 `git reset --soft <기준 커밋>`으로 되돌릴 수 있다. (`workflow-do` 완료 보고에 기준 커밋이 나온다)
+- **권한 프롬프트**: 질문을 없애도 Claude Code 권한 설정에 따라 `git add`·`git commit` 실행 승인을 따로 물을 수 있다. 자동 커밋을 쓸 프로젝트의 `.claude/settings.json`에 허용 규칙을 넣는다.
+
+  ```json
+  {
+    "permissions": {
+      "allow": ["Bash(git add:*)", "Bash(git commit:*)"]
+    }
+  }
+  ```
+
+  그래도 승인을 자주 물으면 `/fewer-permission-prompts`로 실제로 자주 쓰인 명령을 허용 목록에 넣는다.
+- `/simplify`·`/code-review`는 Phase마다 커밋해도 이번 작업 전체를 보도록 첫 `do 시작` 행의 기준 커밋 이후 변경을 대상으로 한다.
 - 스크린샷 증적 폴더는 git에서 제외한다. `workflow-usecase-do`가 증적 폴더를 만들 때 `.gitignore`에 `ai-work/**/*_evidence/` 줄이 없으면 추가한다.
 
 ## 상태 표기
