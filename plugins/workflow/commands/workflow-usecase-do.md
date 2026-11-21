@@ -1,6 +1,7 @@
 ---
 description: workflow-usecase-plan으로 생성한 usecase를 Playwright MCP로 실행하고 결과를 계획서에 실시간 체크한다
 argument-hint: "@ai-work/usecases/YYMMDD/HHMISS_xxx.md [UC-01,UC-03 처럼 일부만 실행 가능]"
+disable-model-invocation: true
 ---
 
 # workflow-usecase-do
@@ -13,21 +14,27 @@ argument-hint: "@ai-work/usecases/YYMMDD/HHMISS_xxx.md [UC-01,UC-03 처럼 일�
 $ARGUMENTS
 ```
 
-- mention(`@경로`)으로 지정된 usecase 계획서를 실행한다.
+- mention(`@경로`) 또는 경로로 지정된 usecase 계획서를 실행한다. `@`를 뗀 경로의 파일을 직접 읽는다. (자동 첨부에 기대지 않는다)
 - 지정이 없으면 `ai-work/usecases/` 하위 최신 계획서를 찾아 AskUserQuestion으로 대상이 맞는지 확인한다.
 - `UC-01,UC-03`처럼 UC ID가 주어지면 해당 UC만 실행한다. 없으면 전체 실행한다.
 
 ## 절대 규칙
 
-- 브라우저 조작은 반드시 Playwright MCP 도구(`browser_navigate`, `browser_snapshot`, `browser_click`, `browser_type`, `browser_fill_form`, `browser_select_option`, `browser_press_key`, `browser_wait_for`, `browser_handle_dialog`, `browser_file_upload`, `browser_take_screenshot`, `browser_network_requests`, `browser_console_messages`, `browser_evaluate` 등)로 수행한다.
+- 브라우저 조작은 **Playwright MCP 도구로만** 한다. (`browser_navigate`, `browser_navigate_back`, `browser_snapshot`, `browser_find`, `browser_click`, `browser_hover`, `browser_type`, `browser_fill_form`, `browser_select_option`, `browser_press_key`, `browser_wait_for`, `browser_handle_dialog`, `browser_file_upload`, `browser_take_screenshot`, `browser_network_requests`, `browser_console_messages`, `browser_evaluate`, `browser_resize`, `browser_close` 등)
+  - 실제 도구 이름 앞에는 설치 방식에 따라 `mcp__plugin_playwright_playwright__` 같은 prefix가 붙는다. 이 문서는 뒷부분 이름만 쓴다.
+  - Playwright MCP 도구를 쓸 수 없으면(미설치, 연결 실패) 다른 브라우저 도구나 스크립트로 대체하지 말고, 그 사실을 알리고 중단한다.
+- **이 커맨드는 검증만 한다.** 실패 원인이 코드에 있어 보여도 애플리케이션 소스를 고치지 않고 결과로 보고한다.
 - **애매한 사항은 직접 결정하지 않는다.** 다음 경우 AskUserQuestion으로 확인한다.
-  - 사전 조건(서버 기동, 계정 정보 등)이 충족되지 않았거나 값이 `실행 시 입력`으로 되어 있을 때
-  - 계획서의 대상 요소가 화면에서 발견되지 않거나 여러 개라 특정이 어려울 때
+  - 사전 조건(서버 기동, 계정 정보 등)이 충족되지 않았을 때
+  - 계획서의 대상에 해당하는 요소 후보가 여러 개이거나 이름이 달라 특정이 어려울 때
   - 실제 화면 동작이 기대결과와 다른데 그것이 버그인지 계획서 오류인지 판단이 필요할 때
   - 데이터 삭제/결제/메일 발송 등 되돌리기 어려운 동작을 실행해야 할 때
-- 계정 비밀번호 등 민감 정보는 결과 기록이나 스크린샷 파일명에 남기지 않는다.
+  - AskUserQuestion을 쓸 수 없는 환경(비대화형 실행 등)이면 해당 단계를 `[X]`로 기록하고 사유를 남긴 뒤 다음 UC로 넘어간다. 되돌리기 어려운 동작은 실행하지 않는다.
+- 계정 비밀번호 등 민감 정보의 실제 값은 계획서, 실행 결과, 보고, 파일명에 남기지 않는다.
 
-## 상태 표기 규칙
+## 상태 표기 · 진행률 규칙
+
+계획서 안의 `표기 규칙` 블록과 같다.
 
 | 표기 | 의미 |
 |------|------|
@@ -36,57 +43,92 @@ $ARGUMENTS
 | `[V]` | 작업완료 (검증 통과) |
 | `[X]` | 실패 (기대결과 불일치 또는 실행 오류) |
 
-- **전체진행률** = `[V]` 단계 수 / 전체 단계 수 × 100 (정수 %). `[X]`는 진행률에 포함하지 않는다.
-- **작업상태**: 대기 / 진행 / 완료 (실행이 끝났지만 `[X]`가 있으면 `완료(실패 N건)`으로 표시)
-- UC별 상태도 동일 규칙으로 갱신한다.
+- **전체진행률** = `[V]` 단계 수 ÷ 전체 단계 수 × 100 (소수점 버림). `[X]`는 분자에 넣지 않는다. 일부 UC만 실행해도 분모는 문서의 전체 단계 수다.
+- **진행률 바** = 10칸. 10%당 `■` 1칸(버림), 나머지는 `□`
+- **작업상태**는 백분율이 아니라 개수로 판단한다: 대기(`[V]`·`[~]`·`[X]` 모두 0개) / 완료(모든 단계 `[V]`) / 진행(그 외)
+  - 실행이 끝났는데 완료가 아니면 `진행 (실패 N건, 미실행 M건)`처럼 사유를 덧붙인다. 실패나 미실행이 남아 있으면 `완료`라고 쓰지 않는다.
+- UC 제목의 상태/진행률도 같은 규칙으로 갱신한다. (분모는 그 UC의 단계 수)
 
 ## 처리 절차
 
 ### 1. 준비
 1. usecase 계획서를 읽고 Base URL, 사전 조건, 실행 대상 UC를 확인한다.
-2. Base URL에 접속 가능한지 확인한다. 접속 불가면 AskUserQuestion으로 서버 기동 방법/대기 여부를 확인한다.
-3. 증적 저장 경로: usecase 파일과 같은 디렉토리의 `screenshots/HHMISS_[usecase파일명]/` (실행 시각 기준)
-4. 필요하면 `browser_resize`로 계획서의 해상도를 맞춘다.
-5. 계획서 상단 `작업상태`를 `진행`으로 바꾸고 `최종 갱신`을 갱신한다.
+2. Playwright MCP 도구를 쓸 수 있는지 확인한다. 쓸 수 없으면 중단한다.
+3. 값을 준비한다.
+   - `${환경변수명}`은 셸에서 조회한다. (Bash: `printenv 이름` / PowerShell: `$env:이름`) 값이 비어 있으면 어떻게 할지 AskUserQuestion으로 확인한다.
+   - `(실행 시 입력)`은 실행 전에 사용자에게 값을 묻는다.
+4. 실행 시각을 한 번 조회한다.
+   - Bash: `date '+%y%m%d_%H%M%S %Y-%m-%d %H:%M:%S'`
+   - PowerShell: `Get-Date -Format 'yyMMdd_HHmmss yyyy-MM-dd HH:mm:ss'`
+5. 증적 디렉토리를 만든다. usecase 파일 경로에서 `.md`를 뺀 뒤 `_evidence/<실행 YYMMDD_HHMISS>/`를 붙인 경로다.
+   - 예: `ai-work/usecases/261121/153000_add_login_page.md` → `ai-work/usecases/261121/153000_add_login_page_evidence/261122_101500/`
+   - 증적은 git에 올리지 않는다. git 저장소이면 디렉토리를 만든 뒤 `git check-ignore -q <증적 디렉토리>`로 확인하고, 무시되지 않는 상태(종료 코드 1)이면 `ai-work/`가 있는 디렉토리의 `.gitignore`에 `ai-work/**/*_evidence/` 한 줄을 추가한다. (`.gitignore`가 없으면 만든다. 이 한 줄 추가는 "검증만 한다" 규칙의 예외다)
+   - 계획서와 usecase 문서는 제외하지 않는다.
+6. 이전 실행 흔적을 초기화한다. (재실행 대비)
+   - 실행 대상 UC의 모든 단계를 `[ ]`로 되돌리고, 이전 실행에서 덧붙인 `→ 실제: ...`를 지운다.
+   - 실행 대상이 아닌 UC는 그대로 둔다. 다만 `[~]`가 남아 있으면(중단된 실행의 흔적) `[ ]`로 되돌린다.
+   - 이전 실행의 기록(`4. 실행 결과`, `6. 실패 상세`, 증적 디렉토리)은 지우지 않는다.
+7. 표기를 다시 세어 진행률을 고치고, 상단 표의 작업상태를 `진행`으로, `최종 갱신`을 실행 시각으로 바꾼다.
+8. `browser_navigate`로 Base URL에 접속되는지 확인한다. 접속되지 않으면 AskUserQuestion으로 서버 기동 방법/대기 여부를 확인한다.
+9. 계획서에 해상도가 있으면 `browser_resize`로 맞춘다.
 
 ### 2. 단계 실행 (UC 순서대로, 단계 순서대로)
 각 단계마다 다음을 **반드시 순서대로** 수행한다.
 
-1. 계획서의 해당 단계 상태를 `[ ]` → `[~]` 로 변경한다. (실행 전에 파일 갱신)
-2. 요소를 다루기 전 `browser_snapshot`으로 화면 구조를 확인하고, 계획서의 대상(role + 이름)에 해당하는 ref를 찾는다.
+1. 계획서의 해당 단계 상태를 `[ ]` → `[~]`로 바꾼다. (도구를 실행하기 전에 파일을 먼저 고친다)
+2. 대상 요소를 찾는다. 직전 도구 응답에 최신 화면 구조가 들어 있으면 그것을 쓰고, 없으면 `browser_find` 또는 `browser_snapshot`으로 대상(role + 이름)의 ref를 얻는다. ref는 도구의 `target` 인자로 넘긴다.
 3. 액션에 대응하는 Playwright MCP 도구를 실행한다.
-4. 기대결과를 검증한다. (snapshot 텍스트, URL, network 응답, console 오류 등)
-5. 결과에 따라 상태를 갱신한다.
+   - `navigate`: 대상이 `/`로 시작하면 Base URL 뒤에 붙인다.
+   - `screenshot`: `filename`에 `<증적 디렉토리>/<파일명>`을 프로젝트 루트 기준 상대경로로 넘긴다.
+   - `upload`: 파일 경로를 절대경로로 바꿔 넘긴다.
+   - `wait`: 대기 시간은 최대 30초다.
+   - `network`: `filter`로 URL을 좁혀 조회한다. 요청 뒤에 페이지가 이동했으면 `all: true`로 조회한다.
+4. 기대결과를 검증한다. (화면 텍스트, URL, network 응답, console 오류 등)
+5. 결과를 기록한다.
    - 통과: `[~]` → `[V]`
-   - 실패: `[~]` → `[X]`, 해당 단계 행의 기대결과 칸 뒤에 `→ 실제: ...`를 덧붙이고 `browser_take_screenshot`으로 실패 화면을 저장한다.
-6. 전체진행률, 진행률 바, UC별 진행률/상태, 최종 갱신 시각을 재계산하여 파일에 반영한다.
+   - 실패: `[~]` → `[X]`. 그 행의 `값 / 기대결과` 칸 뒤에 `→ 실제: ...`를 덧붙이고, `browser_take_screenshot`으로 `<증적 디렉토리>/<단계ID>_fail.png`를 남긴다.
+6. 같은 수정에서 상단 표의 전체진행률, 진행률 바, 해당 UC 제목의 상태/진행률을 함께 고친다. `최종 갱신` 시각은 UC가 끝날 때마다 고친다. (단계마다 시각을 조회하지 않는다)
 
-- 한 단계가 실패하면 같은 UC의 이후 단계는 선행 조건이 깨졌는지 판단한다. 계속 진행이 의미 없으면 남은 단계는 `[ ]`(미실행)로 두고 다음 UC로 넘어간다. 판단이 애매하면 AskUserQuestion으로 확인한다.
-- 요소를 못 찾는 경우 `browser_wait_for`로 짧게 대기 후 1회 재시도한 다음 실패 처리한다.
+실패 처리 규칙:
+- 대상 요소를 못 찾으면 `browser_wait_for`로 짧게 기다린 뒤 한 번 더 찾는다.
+  - 그래도 없으면 `[X]`로 기록한다.
+  - 이름만 조금 다른 요소가 있거나 후보가 여러 개여서 계획서 쪽 오류로 보이면 AskUserQuestion으로 어느 요소를 쓸지 확인한다. 확인받은 요소로 진행했으면 계획서의 대상 칸을 실제 이름으로 고친다.
+- `(가정)`이 붙은 대상이 실제 화면의 요소와 정확히 일치하면 `(가정)`을 뗀다. 일치하지 않으면 위 규칙대로 확인한다.
+- 한 단계가 실패하면 같은 UC의 이후 단계가 의미가 있는지 판단한다. 선행 조건이 깨져 의미가 없으면 남은 단계를 `[ ]`(미실행)로 두고 다음 UC로 넘어간다. 판단이 애매하면 AskUserQuestion으로 확인한다.
 
 ### 3. 종료 처리
-1. 각 UC 종료 시 `browser_console_messages`로 console error 유무를 확인하여 비고에 기록한다.
+1. 각 UC가 끝날 때 `browser_console_messages`를 `level: error`, `all: true`로 조회한다. 직전 조회 이후 새로 생긴 error가 있으면 `4. 실행 결과`의 비고에 `UC-02 console error 1건`처럼 적는다. 계획서에 `console` 단계가 없으면 이것만으로 단계를 실패 처리하지 않는다.
 2. 전체 실행이 끝나면 `browser_close`로 브라우저를 닫는다.
-3. 계획서 `4. 실행 결과` 표에 한 행을 추가한다.
+3. 표기를 다시 세어 전체진행률과 작업상태를 확정한다. (완료가 아니면 `진행 (실패 N건, 미실행 M건)`)
+4. `4. 실행 결과` 표에 한 행을 추가한다. 통과/실패/미실행은 이번 실행 대상 UC의 단계 수다.
 
 ```markdown
-| YYYY-MM-DD HH:MI:SS | 통과 N | 실패 N | 미실행 N | 실패 UC: UC-02(3단계), 증적: screenshots/HHMISS_xxx/ |
+| YYYY-MM-DD HH:MI:SS | 전체 (또는 UC-01,UC-03) | N | N | N | `..._evidence/YYMMDD_HHMISS/` / 실패: 02-03, UC-02 console error 1건 |
 ```
 
-4. 실패 항목이 있으면 아래 섹션을 추가한다.
+5. 실패한 단계가 있으면 `## 6. 실패 상세` 섹션에 이번 실행을 기록한다. 섹션이 없으면 `5. 작업 이력` 아래에 만들고, 있으면 그 섹션 끝에 이번 실행(`### 실행일시`)만 추가한다.
 
 ```markdown
-## 6. 실패 상세 (YYYY-MM-DD HH:MI:SS)
-| UC | 단계 | 기대결과 | 실제결과 | 추정 원인 | 증적 |
-|----|------|----------|----------|-----------|------|
+## 6. 실패 상세
+
+### YYYY-MM-DD HH:MI:SS 실행
+| 단계 | 기대결과 | 실제결과 | 추정 원인 | 증적 |
+|------|----------|----------|-----------|------|
+| 02-03 | ... | ... | ... | `02-03_fail.png` |
 ```
 
-5. `작업 이력`에 실행 이력을 추가한다.
-6. 원본 작업계획서(usecase 계획서의 `원본 작업계획서` 항목)에 대응하는 완료 기준/테스트 항목이 있고 해당 UC가 모두 통과했다면, 원본 계획서 항목을 `[V]`로 갱신할지 AskUserQuestion으로 확인한 후 반영하고 진행률을 재계산한다.
+6. `5. 작업 이력`에 실행 이력을 한 줄 추가한다.
+7. 원본 작업계획서에 반영한다.
+   - `2. 작업계획서 매핑`에서 이번에 통과한 UC(모든 단계가 `[V]`)가 가리키는 항목 ID를 찾는다.
+   - 그 항목을 검증하는 UC가 **모두** 통과했고 원본 계획서에서 아직 `[V]`가 아닌 항목만 고른다.
+   - 고른 항목을 원본 계획서(상단 표의 `원본 작업계획서`)에서 `[V]`로 바꿀지 AskUserQuestion으로 확인한다.
+   - 반영할 때는 원본 계획서의 `진행 관리 규칙`대로 진행률과 작업상태를 다시 계산하고 `8. 작업 이력`에 한 줄 남긴다.
 
 ## 완료 보고
-- 실행한 usecase 계획서 경로
+- 실행한 usecase 계획서 경로와 실행 대상
 - UC별 결과 (통과/실패/미실행)
-- 전체진행률
+- 전체진행률과 작업상태
 - 실패 항목 요약과 추정 원인, 증적 경로
-- 실패가 있으면 수정 후 `/workflow:workflow-usecase-do @<경로> UC-xx`로 재실행하도록 안내한다.
+- 실행 중 계획서 내용을 고친 것(대상 요소 이름 등)이 있으면 그 목록
+- `.gitignore`에 증적 제외 줄을 추가했으면 그 사실
+- 실패가 있으면 수정 후 `/workflow:workflow-usecase-do @<경로> UC-xx`로 해당 UC만 재실행할 수 있다고 안내한다.
