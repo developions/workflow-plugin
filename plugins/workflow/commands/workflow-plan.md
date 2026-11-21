@@ -308,7 +308,7 @@ DB 스키마, API, 화면이 바뀌는 계획이면 4단계에서 이 플러그�
 - **코드 정리 및 리뷰 Phase**: 소스 코드를 바꾸는 계획이면 항상 마지막 Phase로 넣는다. Phase 번호는 앞 Phase 다음 번호이고, 항목은 템플릿의 두 개(`/simplify` → `/code-review medium`) 그대로 쓴다. 문서·설정만 바꾸는 계획이면 넣지 않는다. 실행은 `workflow-do`가 Skill 도구로 한다.
 - **설계안 비교**: 3단계를 건너뛰었으면 표 대신 `대안 없음: <이유>` 한 줄만 쓴다.
 - **결정 사항 기록**
-  - `단계`에는 질문한 커맨드와 맥락을 쓴다: `plan`(2단계), `plan · 기준 브랜치`, `plan · 설계안`, `plan · 상세 설계`(4단계), `plan · 브랜치`, `plan · 커밋 방식`, `plan · 커밋`, `review`, `review · 커밋`, `do`, `do · 1.2`·`do · DoD-2`(항목 ID), `do · 미결 확정`, `do · 커밋`, `usecase-plan`, `usecase-plan · 커밋`, `usecase-do · 02-03`(단계 ID), `usecase-do · 커밋`, `<커맨드> · 브랜치`(작업 브랜치 확인), `<커맨드> · 대화 지시`
+  - `단계`에는 질문한 커맨드와 맥락을 쓴다: `plan`(2단계), `plan · 기준 브랜치`, `plan · 설계안`, `plan · 상세 설계`(4단계), `plan · 브랜치`, `plan · 커밋 방식`, `plan · 커밋`, `review`, `review · 대상`, `review · 형식`, `review · 커밋`, `do · 대상`, `do · 범위`, `do · 형식`, `do · 미결 확정`, `do · 준비`, `do · 1.2`·`do · 3.1, 3.2`·`do · DoD-2`(항목 ID), `do · 커밋`, `usecase-plan`, `usecase-plan · 커밋`, `usecase-do · 준비`, `usecase-do · 02-03`(단계 ID), `usecase-do · 커밋`, `<커맨드> · 브랜치`(작업 브랜치 확인), `<커맨드> · 대화 지시`
   - 시각 조회는 따로 부르지 않고 답을 받은 직후의 다음 명령(git·탐색 명령 등)에 붙여 실행해도 된다. 한 번의 AskUserQuestion으로 받은 답과 같은 단계에서 연달아 받은 답은 마지막 답 뒤에 한 번 조회한 값을 함께 쓴다.
   - 6단계(시각 조회) 전에 받은 답의 일시는 답을 받은 시점에 Bash `date '+%Y-%m-%d %H:%M:%S'` / PowerShell `Get-Date -Format 'yyyy-MM-dd HH:mm:ss'`로 조회해 둔다.
   - 한 번의 AskUserQuestion에 질문이 여러 개면 질문마다 한 행씩 쓴다.
