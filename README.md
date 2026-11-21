@@ -39,6 +39,13 @@ workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─�
 - `workflow-usecase-plan`은 구현 전에 먼저 써 둘 수도 있다. 이때 확인되지 않은 화면 요소에는 `(가정)`이 붙는다.
 - `workflow-usecase-do`는 검증만 한다. 실패해도 소스를 고치지 않고 결과를 보고한다.
 
+## 작업 브랜치
+
+- `workflow-plan`이 만든(또는 고른) 브랜치가 계획서 상단 표의 `작업 브랜치`에 기록되고, 이후 모든 커맨드는 이 브랜치에서 실행된다.
+- `workflow-plan-review`, `workflow-do`, `workflow-usecase-plan`은 시작할 때 현재 브랜치를 확인한다. 다르면 전환 / 중단을 묻는다. `workflow-plan-review`·`workflow-do`는 `현재 브랜치에서 진행`(계획서의 작업 브랜치를 바꾸고 이력 기록)도 고를 수 있다.
+- `workflow-usecase-do`는 서버가 다른 코드로 떠 있을 수 있어 브랜치를 직접 바꾸지 않는다. 중단하거나, 계속하면 결과에 `브랜치 불일치`를 표시하고 원본 계획서에 반영하지 않는다.
+- 전환이 실패하면(미커밋 변경 충돌 등) stash나 강제 전환 없이 중단한다.
+
 ## 설계안 비교
 
 - 구현 방법이 갈리는 계획이면 `workflow-plan`이 서로 다른 전제(최소 변경 / 구조 개선 / 다른 축)로 설계안 2~3개를 만든다. 범위가 넓으면 Plan agent를 동시에 실행해 만든다.
