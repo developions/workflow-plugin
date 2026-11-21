@@ -61,7 +61,7 @@ $ARGUMENTS
 
 1. **화면 목록**: 경로, 화면 이름, 신규/변경/삭제, 진입 경로(메뉴, 버튼, 링크), 접근 권한
 2. **요소**: 사용자가 보고 조작하는 요소를 `role "이름"`으로 적는다. (예: `button "저장"`, `textbox "이메일"`, `combobox "구분"`, `link "상세"`, `columnheader "가입일"`) 이름은 화면에 보이는 라벨·텍스트 그대로 쓴다. 보이는 라벨이 없는 요소(아이콘 버튼 등)는 접근 가능한 이름(`aria-label`)을 정한다.
-   - role과 이름은 usecase가 쓰는 Playwright 접근성 스냅샷 기준이다. `password`·`email`·`text` 입력은 `textbox`, `number` 입력은 `spinbutton`이다. `<label>`이 없으면 `placeholder`가 이름이 된다. (예: `<input type="password" placeholder="비밀번호">` → `textbox "비밀번호"`)
+   - role과 이름은 usecase가 쓰는 Playwright 접근성 스냅샷 기준이다. `password`·`email`·`text` 입력과 `date`·`time`·`datetime-local` 입력은 `textbox`, `number` 입력은 `spinbutton`이다. `<label>`이 없으면 `placeholder`가 이름이 된다. (예: `<input type="password" placeholder="비밀번호">` → `textbox "비밀번호"`)
    - role이 없는 요소(클릭 처리만 붙은 `div`·`span` 등)는 스냅샷에서 `generic`이라 role로 찾을 수 없다. 기존 요소는 `text "보이는 텍스트"`로 적는다. 새로 만드는 요소는 `button`·`link`처럼 role이 있는 요소로 정한다.
 3. **입력 검증**: 필드마다 필수 여부, 형식·길이·범위, 검증 시점, 오류 문구와 표시 위치. API의 요청 검증 규칙과 맞춘다. (화면만 느슨하거나 화면만 엄격하지 않게)
 4. **동작·이동**: 요소를 조작하면 무엇이 일어나는가. 부르는 API(`### API 변경`의 번호), 성공 시 결과(이동할 경로, 갱신되는 목록, 성공 문구), 실패 시 결과(오류 코드별 문구). 되돌리기 어려운 동작(삭제, 발송, 결제)은 확인 창 문구와 버튼 이름을 정한다.
