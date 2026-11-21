@@ -40,6 +40,17 @@
 - 커맨드 없이도 쓸 수 있다. (`/workflow:db-design 설계`, `/workflow:api-design 점검 계획 @<계획서>`, 또는 대화에서 DB·API 설계를 요청) 이때는 결과를 대화에만 보여 준다.
 - skill을 쓸 수 없는 세션에서는 커맨드가 `${CLAUDE_PLUGIN_ROOT}/skills/<이름>/SKILL.md`를 직접 읽어 같은 기준으로 진행한다.
 
+## 공통 파일
+
+| 파일 | 설명 | 쓰는 곳 |
+|------|------|---------|
+| `templates/plan-template.md` | 작업계획서 템플릿 (`진행 관리 규칙`·`결정 · 이력 기록 규칙` 블록 포함) | `workflow-plan`(작성), `workflow-do`·`workflow-plan-review`(예전 형식 계획서 올리기) |
+| `scripts/plan-progress.sh` | 체크 표기를 세어 진행률·진행률 바·작업상태·Phase/UC 제목이 맞는지 확인한다. 다른 곳만 `적힌 값 → 맞는 값`으로 출력하고, 파일은 고치지 않는다 (종료 코드 1은 실행 오류일 때만) | 다섯 커맨드 모두 (`진행 표시 확인`) |
+
+- 스크립트는 bash로 실행한다. (Windows는 Git Bash) bash가 없으면 커맨드가 예전처럼 직접 센다. 직접 실행할 수도 있다: `bash plugins/workflow/scripts/plan-progress.sh ai-work/plans/YYMMDD/HHMISS_xxx.md`
+- `.sh` 파일은 `.gitattributes`로 LF로 고정한다. (CRLF로 받으면 bash에서 깨진다)
+- 템플릿의 블록 문구를 바꾸면 `workflow-do`·`workflow-plan-review`의 형식 올리기 조건(블록 이름, `커밋 방식` 행, 표 머리글)도 함께 맞춘다.
+
 ## 흐름
 
 ```
@@ -138,7 +149,7 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
   }
   ```
 
-  그래도 승인을 자주 물으면 `/fewer-permission-prompts`로 실제로 자주 쓰인 명령을 허용 목록에 넣는다.
+  그래도 승인을 자주 물으면 `/fewer-permission-prompts`로 실제로 자주 쓰인 명령을 허용 목록에 넣는다. `workflow-do`는 항목마다 진행 표시 확인 스크립트(`bash …/plan-progress.sh`)도 실행하므로, 이 명령의 승인이 반복될 때도 같은 방법을 쓴다.
 - `/simplify`·`/code-review`는 Phase마다 커밋해도 이번 작업 전체를 보도록 첫 `do 시작` 행의 기준 커밋 이후 변경을 대상으로 한다.
 - 스크린샷 증적 폴더는 git에서 제외한다. `workflow-usecase-do`가 증적 폴더를 만들 때 `.gitignore`에 `ai-work/**/*_evidence/` 줄이 없으면 추가한다.
 
@@ -155,4 +166,5 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
   - 작업계획서: 작업항목 + 완료 기준(`DoD-n`)
   - usecase 계획서: 전체 단계 수
 - 작업상태: 대기(시작한 항목 없음) / 진행 / 완료(모든 항목 `[V]`)
+- 커맨드는 이 값들을 손으로 다시 세지 않고 `scripts/plan-progress.sh`로 확인한다. `workflow-do`는 항목이 `[V]`가 될 때마다, `workflow-usecase-do`는 UC가 끝날 때마다 실행한다.
 - 애매한 사항은 모든 커맨드에서 AskUserQuestion으로 확답을 받는다.
