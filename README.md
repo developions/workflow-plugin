@@ -12,7 +12,7 @@
 - 설치 후 Claude Code를 재시작하거나 `/reload-plugins`를 실행한다.
 - 로컬 경로로 추가한 marketplace의 플러그인은 복사되지 않고 이 디렉토리에서 바로 로드된다. 커맨드 파일을 고친 뒤에는 재시작이나 `/reload-plugins`만 하면 된다.
 - `workflow-usecase-do`는 Playwright MCP가 설치되어 있어야 한다.
-- 네 커맨드 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다)
+- 다섯 커맨드 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다)
 
 ## 커맨드
 
@@ -20,20 +20,29 @@
 |--------|------|--------|
 | `/workflow:workflow-plan <요구사항>` | 요구사항 → 작업계획서 생성, git branch 추천/생성 | `ai-work/plans/YYMMDD/HHMISS_[summary].md` |
 | `/workflow:workflow-plan-review @<계획서>` | 범위가 크거나 복잡한 계획서 리뷰·보완 | 계획서에 리뷰 결과 반영 |
+| `/workflow:workflow-do @<계획서> [항목 ID 또는 Phase]` | 계획서 기준으로 구현(코딩), 항목마다 진행 상황 갱신 | 소스 변경, 계획서 진행률 갱신 |
 | `/workflow:workflow-usecase-plan @<계획서>` | Playwright MCP용 usecase 계획서 생성 | `ai-work/usecases/YYMMDD/HHMISS_[summary].md` |
 | `/workflow:workflow-usecase-do @<usecase> [UC-01,...]` | usecase를 Playwright MCP로 실행하고 결과 체크 | usecase 계획서 갱신, `<usecase 파일명>_evidence/<실행 YYMMDD_HHMISS>/` 증적 |
 
 ## 흐름
 
 ```
-workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ 구현 ─▶ workflow-usecase-plan ─▶ workflow-usecase-do
-                                                     ▲                                      │
-                                                     └────────── 실패 시 수정 후 재실행 ──────┘
+workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─▶ workflow-usecase-plan ─▶ workflow-usecase-do
+                                                     ▲                                          │
+                                                     └──────────── 실패 시 수정 후 재실행 ─────────┘
 ```
 
-- 구현 전용 커맨드는 없다. `@<계획서 경로>`를 mention하여 작업을 지시하면, 계획서 안의 `진행 관리 규칙`에 따라 진행 상황이 갱신된다.
+- `workflow-do`는 계획서의 `진행 관리 규칙`에 따라 항목마다 `[~]` → `[V]`로 갱신하며 구현한다. 중단된 경우 같은 커맨드로 이어서 진행한다. 커밋은 끝난 뒤 묻고, push는 하지 않는다.
+- 소스 코드를 바꾸는 계획에는 마지막 Phase로 `코드 정리 및 리뷰`가 들어간다. `workflow-do`가 Claude Code의 `/simplify`로 코드를 정리하고, `/code-review medium`으로 리뷰한 뒤 지적 사항 중 반영할 것을 사용자가 고르게 한다.
+- usecase 실패를 고칠 때도 `workflow-do`에 수정 내용을 추가 지시로 넣어 진행할 수 있다.
 - `workflow-usecase-plan`은 구현 전에 먼저 써 둘 수도 있다. 이때 확인되지 않은 화면 요소에는 `(가정)`이 붙는다.
 - `workflow-usecase-do`는 검증만 한다. 실패해도 소스를 고치지 않고 결과를 보고한다.
+
+## 설계안 비교
+
+- 구현 방법이 갈리는 계획이면 `workflow-plan`이 서로 다른 전제(최소 변경 / 구조 개선 / 다른 축)로 설계안 2~3개를 만든다. 범위가 넓으면 Plan agent를 동시에 실행해 만든다.
+- 사용자가 미리보기로 비교해 하나를 고르고, 선택하지 않은 안과 이유도 계획서 `2. 결정 사항` 아래 `설계안 비교`에 남긴다.
+- `workflow-plan-review`는 선택한 안의 전제가 코드와 맞는지 점검하고, `workflow-do`는 전제가 깨지면 혼자 방향을 바꾸지 않고 대안을 다시 보여 주며 묻는다.
 
 ## git 처리
 
