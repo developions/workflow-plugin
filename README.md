@@ -33,6 +33,9 @@
 
 - skill은 기준과 형식만 준다. 파일을 쓰거나 커밋하지 않고, 커맨드가 불렀을 때는 사용자에게 직접 묻지 않는다. 미정 사항을 돌려주면 커맨드가 묻고 결정 사항에 기록한다.
 - DB와 API가 함께 바뀌면 `db-design`을 먼저 하고 그 정의를 가지고 `api-design`을 한다.
+- 설계 모드에서 찾은 관례는 정의의 `따른 관례` 줄에 근거와 함께 남는다. 점검 모드(`workflow-plan-review`, `workflow-do`)는 관례를 처음부터 다시 찾지 않고 이 줄을 재사용한다.
+- 결과는 변경 규모에 맞게 쓴다. 컬럼 몇 개 추가처럼 작은 변경은 바뀐 표만 쓴다.
+- 관례가 없으면 기본값을 제안해 쓰고, 되돌리기 어렵거나 업무 규칙이거나 다른 팀에 영향을 주는 것만 미정 사항으로 묻는다.
 - 커맨드 없이도 쓸 수 있다. (`/workflow:db-design 설계`, `/workflow:api-design 점검 @<계획서>`, 또는 대화에서 DB·API 설계를 요청) 이때는 결과를 대화에만 보여 준다.
 - skill을 쓸 수 없는 세션에서는 커맨드가 `${CLAUDE_PLUGIN_ROOT}/skills/<이름>/SKILL.md`를 직접 읽어 같은 기준으로 진행한다.
 
@@ -84,7 +87,7 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 - 설계안을 고른 뒤 그 안만 구체화하고, 그 과정에서 나온 질문을 계획서를 쓰기 전에 모두 확인한다.
 - 기존 기능의 동작을 바꾸면 `1. 요구사항` 아래 `현재 동작 → 변경 후 동작` 표를 코드 근거와 함께 쓰고, 바뀌는 코드의 호출부와 옛 동작을 검증하는 기존 테스트를 찾아 영향 범위·작업항목·완료 기준에 넣는다. `workflow-plan-review`도 이것을 점검한다.
 - API나 DB가 바뀌면 `workflow:db-design`·`workflow:api-design` skill로 정의를 만들어 `4. 영향 범위` 아래 `### DB 변경`·`### API 변경`에 쓴다. `workflow-plan-review`는 같은 skill의 점검 기준으로 이 정의를 점검하고, `workflow-do`는 구현 기준으로 삼아 구현 결과를 대조하며, `workflow-usecase-plan`은 `network` 검증 기준으로 쓴다.
-- engineering plugin이 설치되어 있으면 필요한 단계에서 `system-design`·`architecture`·`testing-strategy`·`deploy-checklist` skill의 점검 관점을 가져와 쓴다. 설치되어 있지 않으면 그대로 진행한다.
+- engineering plugin이 설치되어 있으면 필요한 단계에서 `system-design`·`architecture`·`testing-strategy`·`deploy-checklist` skill의 점검 관점을 가져와 쓴다. 설치되어 있지 않으면 그대로 진행한다. DB·API 정의는 `db-design`·`api-design`이 맡고, engineering skill은 설계안 비교(`system-design`·`architecture`), 테스트 설계(`testing-strategy`), 배포·운영 관점의 롤백 기준(`deploy-checklist`)에만 쓴다. engineering skill은 두 skill 안에서 부르지 않는다.
 
 ## 설계안 비교
 

@@ -33,10 +33,12 @@ engineering plugin이 설치되어 있으면, 아래 경우에 그 skill을 불�
 
 | skill | 언제 부르나 | 단계 | 계획서에 반영할 곳 |
 |-------|-------------|------|--------------------|
-| `engineering:system-design` | API 계약, 데이터 모델(DB 스키마), 서비스 경계, 캐시·큐가 바뀔 때 | 3단계 (건너뛰었으면 4단계) | 각 설계안의 요약·변경 파일·리스크, `4. 영향 범위`, 작업항목 |
+| `engineering:system-design` | API 계약, 데이터 모델(DB 스키마), 서비스 경계, 캐시·큐 때문에 설계안이 갈릴 때 | 3단계. 3단계를 건너뛰었으면 서비스 경계·캐시·큐가 바뀔 때만 4단계 | 각 설계안의 요약·변경 파일·리스크, (4단계에서 불렀으면) `4. 영향 범위`, 작업항목 |
 | `engineering:architecture` | 라이브러리·프레임워크·저장소·인프라 같은 기술 선택이 설계안을 가를 때 | 3단계 | `설계안 비교` 표의 평가 기준(복잡도, 비용, 확장성, 팀 숙련도)과 트레이드오프 |
 | `engineering:testing-strategy` | API, 데이터 처리, 새 모듈처럼 테스트 설계가 필요한 코드 변경일 때 | 4단계 | `6. 완료 기준`, 테스트 작업항목 |
-| `engineering:deploy-checklist` | DB 마이그레이션, feature flag, 하위 호환을 깨는 API 변경이 있을 때 | 4단계 | `7. 리스크 및 고려사항`(롤백 방안·롤백 조건), 필요하면 작업항목·완료 기준 |
+| `engineering:deploy-checklist` | DB 마이그레이션, feature flag, 하위 호환을 깨는 API 변경이 있을 때 | 4단계 | `7. 리스크 및 고려사항`의 운영 관점(롤백 기준, 스테이징·스모크 확인, 배포 후 볼 지표, 알릴 대상), 필요하면 완료 기준 |
+
+- **DB·API 설계 skill과 나누기**: 마이그레이션 롤백 방법, 배포 순서, 하위 호환 대응처럼 DB·API 정의에 속하는 것은 `workflow:db-design`·`workflow:api-design`이 정한다. `system-design`은 설계안 비교에만, `deploy-checklist`는 배포·운영 관점에만 쓰고 같은 내용을 두 번 쓰지 않는다. engineering skill은 두 skill 안에서 부르지 않는다. (DB·API에 대해서는 두 skill이 더 구체적이다)
 
 - **설치 확인**: Skill 도구로 쓸 수 있는 skill 목록에 `engineering:<이름>`이 있을 때만 부른다. 없으면 그 단계를 지금처럼 직접 진행한다. 설치를 권하거나 묻지 않는다.
 - **부르는 방법**: 해당 단계에서 Skill 도구로 부른다. 같은 skill은 한 번만 부르고, 얻은 관점을 이후 단계에서 다시 쓴다. Plan agent를 쓸 때는 메인이 skill을 부른 뒤 그 점검 관점을 각 agent 프롬프트에 넣는다.
@@ -59,7 +61,7 @@ DB 스키마나 API가 바뀌는 계획이면 4단계에서 이 플러그인의 
 - **skill을 쓸 수 없으면**(Skill 도구로 쓸 수 있는 목록에 없음): `${CLAUDE_PLUGIN_ROOT}/skills/db-design/SKILL.md`, `${CLAUDE_PLUGIN_ROOT}/skills/api-design/SKILL.md`를 Read 해서 같은 기준으로 직접 진행한다.
 - **skill은 기준과 형식만 준다.** 파일을 쓰거나 사용자에게 묻지 않는다. skill을 부른 뒤 이 커맨드의 4단계를 이어서 한다.
   - skill이 돌려준 `미정 사항`은 이 커맨드가 AskUserQuestion으로 확인하고 `2. 결정 사항`에 기록한다.
-  - 정의는 7단계에서 계획서 `4. 영향 범위` 아래에 skill의 결과 형식대로 쓴다. 섹션 제목은 `### DB 변경`, `### API 변경` 그대로 쓴다. (다른 커맨드가 이 제목으로 찾는다)
+  - 정의는 7단계에서 계획서 `4. 영향 범위` 아래에 skill의 결과 형식대로 쓴다. 섹션 제목은 `### DB 변경`, `### API 변경` 그대로 쓴다. (다른 커맨드가 이 제목으로 찾는다) `따른 관례` 줄은 빼지 않는다. `workflow-plan-review`와 `workflow-do`가 점검할 때 관례를 다시 찾지 않고 이 줄을 재사용한다.
   - skill이 돌려준 작업항목·완료 기준·리스크 후보를 계획서에 반영한다. 작업항목은 이 정의를 기준으로 나누고, 마이그레이션 항목에는 `(단독 커밋)`을 붙인다.
 - 3단계(설계안 비교)에서는 부르지 않는다. 상세 정의는 선택한 안에 대해서만 한다.
 - **기록**: 부른 skill은 engineering skill과 같이 `8. 작업 이력` 첫 행의 `참고 skill:`에 남기고 완료 보고에 적는다. (예: `참고 skill: db-design, api-design, testing-strategy`)
@@ -138,7 +140,7 @@ DB 스키마나 API가 바뀌는 계획이면 4단계에서 이 플러그인의 
 - 변경할 파일과 변경 내용, 작업 순서(Phase 구성)를 정리한다. 작업 항목과 영향 범위는 선택한 안을 기준으로 한다.
   - Phase는 `workflow-do`의 커밋 단위다. 한 Phase가 끝났을 때 테스트·빌드가 통과하는 상태가 되도록 나눈다. (예: DB → API → 화면처럼 의존 순서대로)
   - DB 마이그레이션, 파일 삭제, 기존 데이터 이관처럼 되돌리기 어려운 항목은 작업항목 끝에 `(단독 커밋)`을 붙인다. `workflow-do`가 그 항목만 따로 커밋한다.
-- API·DB가 바뀌면 `DB·API 설계 skill`대로 `workflow:db-design`·`workflow:api-design`을 불러 테이블·엔드포인트 정의를 정한다. 3단계를 건너뛰었고 `engineering:system-design`이 필요한 변경이면 여기서 부른다.
+- API·DB가 바뀌면 `DB·API 설계 skill`대로 `workflow:db-design`·`workflow:api-design`을 불러 테이블·엔드포인트 정의를 정한다. DB·API 정의 때문에 `engineering:system-design`을 따로 부르지 않는다. 3단계를 건너뛰었고 서비스 경계·캐시·큐가 바뀌면 그때만 여기서 부른다.
 - 기존 기능의 동작을 바꾸면 `기존 기능 변경 점검 항목`으로 현재 동작, 호출부, 기존 테스트를 확인한다.
 - 완료 기준과 테스트 항목, 리스크(롤백 방안 등)를 정리한다. `engineering:testing-strategy`·`engineering:deploy-checklist`를 부를 경우는 `engineering plugin 활용`을 따른다.
 - 여기서 새로 나온 애매한 사항(설계를 고른 뒤에야 드러나는 세부 사항)을 AskUserQuestion으로 확인한다. 사용자가 지금 정하지 않겠다고 하면 `(미결)`로 남긴다.
