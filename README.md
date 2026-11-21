@@ -121,7 +121,9 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
 
 - 스크립트는 bash로 실행한다. (Windows는 Git Bash) bash가 없으면 커맨드가 예전처럼 직접 센다. 직접 실행할 수도 있다: `bash plugins/workflow/scripts/plan-progress.sh ai-work/plans/YYMMDD/HHMISS_xxx.md`
 - `.sh` 파일은 `.gitattributes`로 LF로 고정한다. (CRLF로 받으면 bash에서 깨진다)
-- 템플릿의 블록 문구를 바꾸면 `workflow-do`·`workflow-plan-review`의 형식 올리기 조건(블록 이름, `커밋 방식` 행, 표 머리글)도 함께 맞춘다.
+- `workflow-do`·`workflow-plan-review`는 계획서를 템플릿과 비교해 예전 형식인지 본다.
+  - 두 규칙 블록(`진행 관리 규칙`·`결정 · 이력 기록 규칙`)의 문구만 바꾸면, 진행 중인 계획서는 두 커맨드를 다음에 실행할 때 묻지 않고 새 문구로 바뀐다. (`8. 작업 이력`에 `계획 변경 — 규칙 블록 갱신`이 남는다)
+  - 상단 표 행이나 `2. 결정 사항`·`8. 작업 이력` 표 머리글을 바꾸면 두 커맨드가 형식 올리기를 묻는다. 이때는 두 커맨드의 예전 형식 조건과 열 옮기는 규칙(`확정 내용` → `선택` 등)도 함께 고친다.
 
 ## 흐름
 
@@ -147,6 +149,8 @@ workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─�
 - `workflow-plan`은 코드를 탐색하기 전에 기준 브랜치를 확인한다. 기본 브랜치가 아닌 곳에서 실행하면 어느 브랜치 코드를 기준으로 계획할지 먼저 묻고, 그 위치에서 작업 브랜치를 만든다.
 - `workflow-plan`이 만든(또는 고른) 브랜치가 계획서 상단 표의 `작업 브랜치`에 기록되고, 이후 모든 커맨드는 이 브랜치에서 실행된다.
 - `workflow-plan-review`, `workflow-do`, `workflow-usecase-plan`은 시작할 때 현재 브랜치를 확인한다. 다르면 전환 / 중단을 묻는다. `workflow-plan-review`·`workflow-do`는 `현재 브랜치에서 진행`(계획서의 작업 브랜치를 바꾸고 이력 기록)도 고를 수 있다.
+- 계획서가 현재 브랜치에 없으면(작업 브랜치에만 커밋된 계획서를 main에서 실행한 경우 등) 세 커맨드는 그 경로에 계획서가 있는 브랜치를 로컬·원격에서 찾아 어느 브랜치로 전환할지 묻는다. 경로를 생략했을 때도 로컬 브랜치 전체에서 최신 계획서를 찾는다.
+- 계획서에 적힌 작업 브랜치가 어디에도 없으면(브랜치 이름을 바꿨거나 지운 경우) `workflow-plan-review`·`workflow-do`는 새로 만들기 대신 `현재 브랜치에서 진행`을 추천한다. `workflow-usecase-plan`은 작업 브랜치를 바꾸지 않으므로 중단을 추천한다.
 - `workflow-usecase-do`는 서버가 다른 코드로 떠 있을 수 있어 브랜치를 직접 바꾸지 않는다. 중단하거나, 계속하면 결과에 `브랜치 불일치`를 표시하고 원본 계획서에 반영하지 않는다.
 - 전환이 실패하면(미커밋 변경 충돌 등) stash나 강제 전환 없이 중단한다.
 
