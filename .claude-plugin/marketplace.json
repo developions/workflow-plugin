@@ -11,7 +11,7 @@
     {
       "name": "workflow",
       "source": "./plugins/workflow",
-      "description": "workflow-plan / workflow-plan-review / workflow-do / workflow-usecase-plan / workflow-usecase-do 커맨드와 db-design / api-design skill 제공",
+      "description": "workflow-plan / workflow-plan-review / workflow-do / workflow-usecase-plan / workflow-usecase-do / workflow-status 커맨드, db-design / api-design / ui-design skill, usecase-runner agent 제공",
       "version": "1.0.0"
     }
   ]

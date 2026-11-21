@@ -72,7 +72,7 @@
 ## 4. 영향 범위 (관련 파일/모듈)
 - `path/to/file` - 변경 내용 요약
 
-<!-- API·DB가 바뀔 때만: ### DB 변경, ### API 변경 (형식은 workflow:db-design, workflow:api-design skill의 결과 형식) -->
+<!-- DB·API·화면이 바뀔 때만: ### DB 변경, ### API 변경, ### 화면 변경 (형식은 workflow:db-design, workflow:api-design, workflow:ui-design skill의 결과 형식) -->
 
 ## 5. 작업 항목
 

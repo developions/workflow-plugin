@@ -12,7 +12,7 @@
 - 설치 후 Claude Code를 재시작하거나 `/reload-plugins`를 실행한다.
 - 로컬 경로로 추가한 marketplace의 플러그인은 복사되지 않고 이 디렉토리에서 바로 로드된다. 커맨드 파일을 고친 뒤에는 재시작이나 `/reload-plugins`만 하면 된다.
 - `workflow-usecase-do`는 Playwright MCP가 설치되어 있어야 한다.
-- 다섯 커맨드는 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다) skill 두 개(`db-design`, `api-design`)는 예외다. 커맨드가 Skill 도구로 불러야 하므로 Claude가 부를 수 있게 열어 두었다. (아래 `skill` 참고)
+- 커맨드는 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다) skill 세 개(`db-design`, `api-design`, `ui-design`)는 예외다. 커맨드가 Skill 도구로 불러야 하므로 Claude가 부를 수 있게 열어 두었다. (아래 `skill` 참고)
 
 ## 커맨드
 
@@ -23,6 +23,7 @@
 | `/workflow:workflow-do @<계획서> [항목 ID 또는 Phase]` | 계획서 기준으로 구현(코딩), 항목마다 진행 상황 갱신 | 소스 변경, 계획서 진행률 갱신 |
 | `/workflow:workflow-usecase-plan @<계획서>` | Playwright MCP용 usecase 계획서 생성 | `ai-work/usecases/YYMMDD/HHMISS_[summary].md` |
 | `/workflow:workflow-usecase-do @<usecase> [UC-01,...]` | usecase를 Playwright MCP로 실행하고 결과 체크 | usecase 계획서 갱신, `<usecase 파일명>_evidence/<실행 YYMMDD_HHMISS>/` 증적 |
+| `/workflow:workflow-status [@<계획서> \| all]` | 계획서·usecase 진행 현황(브랜치, 진행률, 진행중·미결 항목)과 다음에 실행할 커맨드. 다른 브랜치의 계획서도 브랜치를 바꾸지 않고 읽는다 | 없음 (읽기 전용) |
 
 ## skill
 
@@ -30,22 +31,36 @@
 |-------|------|-----------|
 | `workflow:db-design` | DB 변경(테이블·컬럼·제약·인덱스·마이그레이션)을 설계·점검하는 기준과 `### DB 변경` 형식 | `workflow-plan`(설계), `workflow-plan-review`(점검 계획. 정의를 새로 쓰거나 다시 쓸 때 설계), `workflow-do`(점검 구현. 설계 방향이 바뀔 때 설계) |
 | `workflow:api-design` | API 변경(엔드포인트·요청·응답·오류 코드·권한·하위 호환)을 설계·점검하는 기준과 `### API 변경` 형식 | 위와 같음 |
+| `workflow:ui-design` | 화면 변경(경로·요소·입력 검증·메시지·상태·권한별 노출·이동)을 설계·점검하는 기준과 `### 화면 변경` 형식. 시각 디자인은 다루지 않는다 | 위와 같음. `workflow-usecase-plan`은 이 정의의 요소 이름·문구를 usecase 대상·기대결과로 쓴다 |
 
 - skill은 기준과 형식만 준다. 파일을 쓰거나 커밋하지 않고, 커맨드가 불렀을 때는 사용자에게 직접 묻지 않는다. 미정 사항을 돌려주면 커맨드가 묻고 결정 사항에 기록한다.
-- DB와 API가 함께 바뀌면 `db-design`을 먼저 하고 그 정의를 가지고 `api-design`을 한다.
+- 여럿이 함께 바뀌면 `db-design` → `api-design` → `ui-design` 순서로, 앞 정의를 가지고 다음 설계를 한다.
+- `ui-design`은 요소를 usecase와 같은 `role "이름"` 표기로 쓴다. 그래서 구현 전에 쓴 usecase도 추측한 이름 대신 정의의 이름을 쓴다. (구현 전이면 여전히 `(가정)`이 붙고, 실행할 때 실제 화면과 대조된다)
 - 설계 모드에서 찾은 관례는 정의의 `따른 관례` 줄에 근거와 함께 남는다. 점검 모드(`점검 계획`·`점검 구현`)와 정의를 다시 쓰는 설계 모드는 관례를 처음부터 다시 찾지 않고 이 줄을 재사용한다.
 - `workflow-do`는 정의에 걸린 항목을 `[V]`로 바꾸기 전에 구현 결과를 정의와 대조한다. 정의와 같아야 검증 통과다.
 - 결과는 변경 규모에 맞게 쓴다. 컬럼 몇 개 추가처럼 작은 변경은 바뀐 표만 쓴다.
 - 관례가 없으면 기본값을 제안해 쓰고, 되돌리기 어렵거나 업무 규칙이거나 다른 팀에 영향을 주는 것만 미정 사항으로 묻는다.
-- 커맨드 없이도 쓸 수 있다. (`/workflow:db-design 설계`, `/workflow:api-design 점검 계획 @<계획서>`, 또는 대화에서 DB·API 설계를 요청) 이때는 결과를 대화에만 보여 준다.
+- 커맨드 없이도 쓸 수 있다. (`/workflow:db-design 설계`, `/workflow:api-design 점검 계획 @<계획서>`, `/workflow:ui-design 설계`, 또는 대화에서 DB·API·화면 설계를 요청) 이때는 결과를 대화에만 보여 준다.
 - skill을 쓸 수 없는 세션에서는 커맨드가 `${CLAUDE_PLUGIN_ROOT}/skills/<이름>/SKILL.md`를 직접 읽어 같은 기준으로 진행한다.
+
+## agent
+
+| agent | 설명 | 부르는 곳 |
+|-------|------|-----------|
+| `usecase-runner` | usecase의 UC 하나를 Playwright MCP로 실행하고, 단계마다 usecase 계획서에 `[~]`/`[V]`/`[X]`를 기록한 뒤 결과를 돌려준다 | `workflow-usecase-do` (실행 대상 UC가 2개 이상인 새 형식 문서) |
+
+- 화면 구조(snapshot) 같은 큰 Playwright 응답이 메인 대화에 쌓이지 않아, UC가 많아도 컨텍스트가 덜 찬다.
+- 브라우저 창은 그대로 보인다. (같은 Playwright MCP 서버를 쓴다) 터미널에는 UC마다 agent 하나로 접혀 보인다.
+- agent는 사용자에게 묻지 못한다. 요소가 애매하거나, 되돌리기 어려운 동작이거나, 버그인지 계획서 오류인지 판단이 필요하면 그 단계에서 멈추고 `확인 필요`로 돌려준다. 커맨드가 묻고 결정 사항에 기록한 뒤 그 단계부터 agent를 다시 실행한다.
+- 계정 값은 agent 프롬프트로 넘기지 않는다. agent가 `accounts.yaml`을 직접 읽어 도구 인자에만 넣는다.
+- 단계 실행 규칙은 agent 파일 한 곳에 있다. UC가 1개이거나 예전 형식 문서이거나 agent를 쓸 수 없으면 커맨드가 그 파일을 읽어 직접 실행한다. agent가 Playwright 도구를 쓸 수 없으면 파일을 건드리지 않고 `실행 불가`를 돌려주고, 커맨드가 직접 실행으로 바꾼다.
 
 ## 공통 파일
 
 | 파일 | 설명 | 쓰는 곳 |
 |------|------|---------|
 | `templates/plan-template.md` | 작업계획서 템플릿 (`진행 관리 규칙`·`결정 · 이력 기록 규칙` 블록 포함) | `workflow-plan`(작성), `workflow-do`·`workflow-plan-review`(예전 형식 계획서 올리기) |
-| `scripts/plan-progress.sh` | 체크 표기를 세어 진행률·진행률 바·작업상태·Phase/UC 제목이 맞는지 확인한다. 다른 곳만 `적힌 값 → 맞는 값`으로 출력하고, 파일은 고치지 않는다 (종료 코드 1은 실행 오류일 때만) | 다섯 커맨드 모두 (`진행 표시 확인`) |
+| `scripts/plan-progress.sh` | 체크 표기를 세어 진행률·진행률 바·작업상태·Phase/UC 제목이 맞는지 확인한다. 다른 곳만 `적힌 값 → 맞는 값`으로 출력하고, 파일은 고치지 않는다 (종료 코드 1은 실행 오류일 때만) | 계획서를 고치는 커맨드 모두와 `usecase-runner` (`진행 표시 확인`), `workflow-status`(현황 조회) |
 
 - 스크립트는 bash로 실행한다. (Windows는 Git Bash) bash가 없으면 커맨드가 예전처럼 직접 센다. 직접 실행할 수도 있다: `bash plugins/workflow/scripts/plan-progress.sh ai-work/plans/YYMMDD/HHMISS_xxx.md`
 - `.sh` 파일은 `.gitattributes`로 LF로 고정한다. (CRLF로 받으면 bash에서 깨진다)
@@ -58,6 +73,8 @@ workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─�
                                                      ▲                                          │
                                                      └──────────── 실패 시 수정 후 재실행 ─────────┘
 ```
+
+- 어디까지 했는지 모르겠으면 언제든 `/workflow:workflow-status`로 계획서별 진행 현황과 다음 커맨드를 본다.
 
 - `workflow-do`는 구현 전에 계획서의 미결 사항(`(미결)` 표시, 비어 있거나 `미정`·`보류`인 결정, 조치가 `미결`인 리뷰 지적 등)을 찾아 AskUserQuestion으로 확정하고 계획서를 고친 뒤 진행한다. 보류한 사항에 걸린 항목은 그 실행에서 건너뛴다.
 - `workflow-do`는 계획서의 `진행 관리 규칙`에 따라 항목마다 `[~]` → `[V]`로 갱신하며 구현한다. 중단된 경우 같은 커맨드로 이어서 진행한다. 커밋은 Phase 단위로 계획서의 `커밋 방식`(추천 `자동`, 값이 없는 예전 계획서는 `확인`)에 따라 하고(아래 `git 처리`), push는 하지 않는다.
@@ -98,7 +115,7 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 
 - 설계안을 고른 뒤 그 안만 구체화하고, 그 과정에서 나온 질문을 계획서를 쓰기 전에 모두 확인한다.
 - 기존 기능의 동작을 바꾸면 `1. 요구사항` 아래 `현재 동작 → 변경 후 동작` 표를 코드 근거와 함께 쓰고, 바뀌는 코드의 호출부와 옛 동작을 검증하는 기존 테스트를 찾아 영향 범위·작업항목·완료 기준에 넣는다. `workflow-plan-review`도 이것을 점검한다.
-- API나 DB가 바뀌면 `workflow:db-design`·`workflow:api-design` skill로 정의를 만들어 `4. 영향 범위` 아래 `### DB 변경`·`### API 변경`에 쓴다. `workflow-plan-review`는 같은 skill의 점검 기준으로 이 정의를 점검하고, `workflow-do`는 구현 기준으로 삼아 구현 결과를 대조하며, `workflow-usecase-plan`은 `network` 검증 기준으로 쓴다.
+- DB·API·화면이 바뀌면 `workflow:db-design`·`workflow:api-design`·`workflow:ui-design` skill로 정의를 만들어 `4. 영향 범위` 아래 `### DB 변경`·`### API 변경`·`### 화면 변경`에 쓴다. `workflow-plan-review`는 같은 skill의 점검 기준으로 이 정의를 점검하고, `workflow-do`는 구현 기준으로 삼아 구현 결과를 대조하며, `workflow-usecase-plan`은 API 정의를 `network` 검증 기준으로, 화면 정의를 단계의 대상·기대결과로 쓴다.
 - engineering plugin이 설치되어 있으면 필요한 단계에서 `system-design`·`architecture`·`testing-strategy`·`deploy-checklist` skill의 점검 관점을 가져와 쓴다. 설치되어 있지 않으면 그대로 진행한다. DB·API 정의는 `db-design`·`api-design`이 맡고, engineering skill은 설계안 비교(`system-design`·`architecture`), 테스트 설계(`testing-strategy`), 배포·운영 관점의 롤백 기준(`deploy-checklist`)에만 쓴다. engineering skill은 두 skill 안에서 부르지 않는다.
 
 ## 설계안 비교
