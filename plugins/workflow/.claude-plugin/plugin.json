@@ -1,6 +1,6 @@
 {
   "name": "workflow",
   "version": "1.0.0",
-  "description": "프롬프트 → 작업계획서 생성, 계획서 리뷰, Playwright MCP usecase 계획 생성 및 실행 워크플로우",
-  "keywords": ["workflow", "plan", "usecase", "playwright"]
+  "description": "요구사항 → 작업계획서 생성, 계획서 리뷰, 구현, Playwright MCP usecase 계획·실행 커맨드와 DB·API 설계 skill",
+  "keywords": ["workflow", "plan", "usecase", "playwright", "db-design", "api-design"]
 }

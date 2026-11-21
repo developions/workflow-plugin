@@ -12,7 +12,7 @@
 - 설치 후 Claude Code를 재시작하거나 `/reload-plugins`를 실행한다.
 - 로컬 경로로 추가한 marketplace의 플러그인은 복사되지 않고 이 디렉토리에서 바로 로드된다. 커맨드 파일을 고친 뒤에는 재시작이나 `/reload-plugins`만 하면 된다.
 - `workflow-usecase-do`는 Playwright MCP가 설치되어 있어야 한다.
-- 다섯 커맨드 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다)
+- 다섯 커맨드는 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다) skill 두 개(`db-design`, `api-design`)는 예외다. 커맨드가 Skill 도구로 불러야 하므로 Claude가 부를 수 있게 열어 두었다. (아래 `skill` 참고)
 
 ## 커맨드
 
@@ -23,6 +23,18 @@
 | `/workflow:workflow-do @<계획서> [항목 ID 또는 Phase]` | 계획서 기준으로 구현(코딩), 항목마다 진행 상황 갱신 | 소스 변경, 계획서 진행률 갱신 |
 | `/workflow:workflow-usecase-plan @<계획서>` | Playwright MCP용 usecase 계획서 생성 | `ai-work/usecases/YYMMDD/HHMISS_[summary].md` |
 | `/workflow:workflow-usecase-do @<usecase> [UC-01,...]` | usecase를 Playwright MCP로 실행하고 결과 체크 | usecase 계획서 갱신, `<usecase 파일명>_evidence/<실행 YYMMDD_HHMISS>/` 증적 |
+
+## skill
+
+| skill | 설명 | 부르는 곳 |
+|-------|------|-----------|
+| `workflow:db-design` | DB 변경(테이블·컬럼·제약·인덱스·마이그레이션)을 설계·점검하는 기준과 `### DB 변경` 형식 | `workflow-plan`(설계), `workflow-plan-review`·`workflow-do`(점검) |
+| `workflow:api-design` | API 변경(엔드포인트·요청·응답·오류 코드·권한·하위 호환)을 설계·점검하는 기준과 `### API 변경` 형식 | 위와 같음 |
+
+- skill은 기준과 형식만 준다. 파일을 쓰거나 커밋하지 않고, 커맨드가 불렀을 때는 사용자에게 직접 묻지 않는다. 미정 사항을 돌려주면 커맨드가 묻고 결정 사항에 기록한다.
+- DB와 API가 함께 바뀌면 `db-design`을 먼저 하고 그 정의를 가지고 `api-design`을 한다.
+- 커맨드 없이도 쓸 수 있다. (`/workflow:db-design 설계`, `/workflow:api-design 점검 @<계획서>`, 또는 대화에서 DB·API 설계를 요청) 이때는 결과를 대화에만 보여 준다.
+- skill을 쓸 수 없는 세션에서는 커맨드가 `${CLAUDE_PLUGIN_ROOT}/skills/<이름>/SKILL.md`를 직접 읽어 같은 기준으로 진행한다.
 
 ## 흐름
 
@@ -71,7 +83,7 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 
 - 설계안을 고른 뒤 그 안만 구체화하고, 그 과정에서 나온 질문을 계획서를 쓰기 전에 모두 확인한다.
 - 기존 기능의 동작을 바꾸면 `1. 요구사항` 아래 `현재 동작 → 변경 후 동작` 표를 코드 근거와 함께 쓰고, 바뀌는 코드의 호출부와 옛 동작을 검증하는 기존 테스트를 찾아 영향 범위·작업항목·완료 기준에 넣는다. `workflow-plan-review`도 이것을 점검한다.
-- API나 DB가 바뀌면 `4. 영향 범위` 아래 `DB 변경`·`API 변경` 정의 표를 쓴다. `workflow-plan-review`는 이 표를 점검하고, `workflow-do`는 구현 기준으로, `workflow-usecase-plan`은 `network` 검증 기준으로 쓴다.
+- API나 DB가 바뀌면 `workflow:db-design`·`workflow:api-design` skill로 정의를 만들어 `4. 영향 범위` 아래 `### DB 변경`·`### API 변경`에 쓴다. `workflow-plan-review`는 같은 skill의 점검 기준으로 이 정의를 점검하고, `workflow-do`는 구현 기준으로 삼아 구현 결과를 대조하며, `workflow-usecase-plan`은 `network` 검증 기준으로 쓴다.
 - engineering plugin이 설치되어 있으면 필요한 단계에서 `system-design`·`architecture`·`testing-strategy`·`deploy-checklist` skill의 점검 관점을 가져와 쓴다. 설치되어 있지 않으면 그대로 진행한다.
 
 ## 설계안 비교

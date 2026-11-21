@@ -4,14 +4,14 @@
     "name": "workspace_workflow"
   },
   "metadata": {
-    "description": "작업계획서 생성/리뷰 및 Playwright MCP 기반 usecase 계획·실행 워크플로우",
+    "description": "작업계획서 생성/리뷰/구현 및 Playwright MCP 기반 usecase 계획·실행 워크플로우",
     "version": "1.0.0"
   },
   "plugins": [
     {
       "name": "workflow",
       "source": "./plugins/workflow",
-      "description": "workflow-plan / workflow-plan-review / workflow-usecase-plan / workflow-usecase-do 커맨드 제공",
+      "description": "workflow-plan / workflow-plan-review / workflow-do / workflow-usecase-plan / workflow-usecase-do 커맨드와 db-design / api-design skill 제공",
       "version": "1.0.0"
     }
   ]

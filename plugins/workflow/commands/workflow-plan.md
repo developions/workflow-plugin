@@ -46,15 +46,25 @@ engineering plugin이 설치되어 있으면, 아래 경우에 그 skill을 불�
   - 이 커맨드의 규칙(애매한 사항은 AskUserQuestion으로 확인, 브랜치 생성·계획서 작성·계획서 커밋까지만)이 skill 내용보다 우선한다.
 - **기록**: 부른 skill은 `8. 작업 이력` 첫 행 내용 끝에 `참고 skill: system-design, testing-strategy`처럼 남기고 완료 보고에 적는다.
 
-### API·DB 변경 점검 항목
-engineering plugin 유무와 상관없이, API나 DB가 바뀌는 계획이면 4단계에서 아래 항목을 확인해 계획서에 반영한다. (`engineering:system-design`은 일반 설계 관점이라 아래 같은 구체 항목은 따로 확인한다)
-- **기존 관례 먼저**: 현재 코드의 네이밍, PK 전략, 공통 컬럼, 오류 응답 형식, 페이지네이션 방식을 찾아 따른다.
-- **DB**: 테이블·컬럼 정의(타입, NULL, 기본값), PK·FK·유니크 제약, 조회 패턴에 맞는 인덱스, 마이그레이션과 롤백, 기존 데이터 이관, 운영 중 잠금 위험
-- **API**: URL·메서드, 요청·응답 스키마, 오류 코드, 페이지네이션·정렬, 하위 호환·버전, 멱등성, 인증·권한, 입력 검증
-- 코드와 요구사항으로 정해지지 않는 항목은 AskUserQuestion으로 확인한다.
-- 정한 내용은 `4. 영향 범위` 아래 `### DB 변경`, `### API 변경` 하위 섹션(테이블·엔드포인트 정의 표)에 쓰고, 필요하면 Mermaid `erDiagram`·`sequenceDiagram`을 함께 넣는다. 작업항목은 이 정의를 기준으로 나눈다.
+## DB·API 설계 skill
 
-### 기존 기능 변경 점검 항목
+DB 스키마나 API가 바뀌는 계획이면 4단계에서 이 플러그인의 skill로 테이블·엔드포인트 정의를 만든다. engineering plugin 유무와 상관없다. (`engineering:system-design`은 설계안을 비교할 때 쓰는 일반 관점이고, 구체적인 정의는 이 skill이 맡는다)
+
+| skill | 언제 부르나 | 결과를 쓸 곳 |
+|-------|-------------|--------------|
+| `workflow:db-design` | 테이블·컬럼·제약·인덱스가 바뀌거나 기존 데이터 이관이 필요할 때 | `4. 영향 범위` 아래 `### DB 변경` |
+| `workflow:api-design` | 엔드포인트가 추가·삭제되거나 요청·응답·오류 코드·권한이 바뀔 때 | `4. 영향 범위` 아래 `### API 변경` |
+
+- **부르는 방법**: 4단계에서 Skill 도구로 인자 `설계`를 주어 부른다. 둘 다 필요하면 `workflow:db-design`을 먼저 부르고, 그 정의 초안을 가지고 `workflow:api-design`을 부른다. (응답 스키마가 테이블 정의에 의존한다) 각각 한 번만 부른다.
+- **skill을 쓸 수 없으면**(Skill 도구로 쓸 수 있는 목록에 없음): `${CLAUDE_PLUGIN_ROOT}/skills/db-design/SKILL.md`, `${CLAUDE_PLUGIN_ROOT}/skills/api-design/SKILL.md`를 Read 해서 같은 기준으로 직접 진행한다.
+- **skill은 기준과 형식만 준다.** 파일을 쓰거나 사용자에게 묻지 않는다. skill을 부른 뒤 이 커맨드의 4단계를 이어서 한다.
+  - skill이 돌려준 `미정 사항`은 이 커맨드가 AskUserQuestion으로 확인하고 `2. 결정 사항`에 기록한다.
+  - 정의는 7단계에서 계획서 `4. 영향 범위` 아래에 skill의 결과 형식대로 쓴다. 섹션 제목은 `### DB 변경`, `### API 변경` 그대로 쓴다. (다른 커맨드가 이 제목으로 찾는다)
+  - skill이 돌려준 작업항목·완료 기준·리스크 후보를 계획서에 반영한다. 작업항목은 이 정의를 기준으로 나누고, 마이그레이션 항목에는 `(단독 커밋)`을 붙인다.
+- 3단계(설계안 비교)에서는 부르지 않는다. 상세 정의는 선택한 안에 대해서만 한다.
+- **기록**: 부른 skill은 engineering skill과 같이 `8. 작업 이력` 첫 행의 `참고 skill:`에 남기고 완료 보고에 적는다. (예: `참고 skill: db-design, api-design, testing-strategy`)
+
+## 기존 기능 변경 점검 항목
 새 기능 추가가 아니라 이미 있는 기능의 동작을 바꾸는 계획이면(일부라도), 4단계에서 아래 항목을 확인해 계획서에 반영한다.
 - **현재 동작**: 바뀌는 동작을 코드에서 직접 찾아 `1. 요구사항` 아래 `현재 동작 → 변경 후 동작` 표에 근거(`path:line`)와 함께 쓴다. 요구사항 문장만 보고 현재 동작을 추측하지 않는다. 코드의 실제 동작이 요구사항의 전제와 다르면 AskUserQuestion으로 확인한다.
 - **호출부·영향 추적**: 바뀌는 함수·메서드·API·화면·공통 컴포넌트·설정값을 쓰는 곳을 Grep으로 모두 찾는다.
@@ -79,7 +89,7 @@ engineering plugin 유무와 상관없이, API나 DB가 바뀌는 계획이면 4
   - 답은 결정 사항에 `plan · 기준 브랜치`로 기록한다.
 - 현재 프로젝트 구조, 관련 소스, CLAUDE.md 등을 필요한 만큼 탐색하여 요구사항과 관련된 파일/모듈을 파악한다.
 - 파악 결과 애매한 부분을 목록화한다.
-- API 계약, DB 스키마, 기술 선택, 마이그레이션처럼 `engineering plugin 활용` 표에 해당하는 변경이 있는지 함께 정리한다.
+- API 계약, DB 스키마, 기술 선택, 마이그레이션처럼 `engineering plugin 활용` 표와 `DB·API 설계 skill` 표에 해당하는 변경이 있는지 함께 정리한다.
 - 이미 있는 기능의 동작을 바꾸는 요구사항인지 정리한다. 바꾸면 4단계에서 `기존 기능 변경 점검 항목`을 확인한다.
 
 #### 범위가 넓을 때: Explore agent 병렬 탐색
@@ -128,7 +138,7 @@ engineering plugin 유무와 상관없이, API나 DB가 바뀌는 계획이면 4
 - 변경할 파일과 변경 내용, 작업 순서(Phase 구성)를 정리한다. 작업 항목과 영향 범위는 선택한 안을 기준으로 한다.
   - Phase는 `workflow-do`의 커밋 단위다. 한 Phase가 끝났을 때 테스트·빌드가 통과하는 상태가 되도록 나눈다. (예: DB → API → 화면처럼 의존 순서대로)
   - DB 마이그레이션, 파일 삭제, 기존 데이터 이관처럼 되돌리기 어려운 항목은 작업항목 끝에 `(단독 커밋)`을 붙인다. `workflow-do`가 그 항목만 따로 커밋한다.
-- API·DB가 바뀌면 `API·DB 변경 점검 항목`으로 테이블·엔드포인트 정의를 정한다. 3단계를 건너뛰었고 `engineering:system-design`이 필요한 변경이면 여기서 부른다.
+- API·DB가 바뀌면 `DB·API 설계 skill`대로 `workflow:db-design`·`workflow:api-design`을 불러 테이블·엔드포인트 정의를 정한다. 3단계를 건너뛰었고 `engineering:system-design`이 필요한 변경이면 여기서 부른다.
 - 기존 기능의 동작을 바꾸면 `기존 기능 변경 점검 항목`으로 현재 동작, 호출부, 기존 테스트를 확인한다.
 - 완료 기준과 테스트 항목, 리스크(롤백 방안 등)를 정리한다. `engineering:testing-strategy`·`engineering:deploy-checklist`를 부를 경우는 `engineering plugin 활용`을 따른다.
 - 여기서 새로 나온 애매한 사항(설계를 고른 뒤에야 드러나는 세부 사항)을 AskUserQuestion으로 확인한다. 사용자가 지금 정하지 않겠다고 하면 `(미결)`로 남긴다.
@@ -269,7 +279,7 @@ engineering plugin 유무와 상관없이, API나 DB가 바뀌는 계획이면 4
 ## 4. 영향 범위 (관련 파일/모듈)
 - `path/to/file` - 변경 내용 요약
 
-<!-- API·DB가 바뀔 때만: ### DB 변경 (테이블·컬럼·인덱스·마이그레이션 표), ### API 변경 (메서드·URL·요청·응답·오류 표) -->
+<!-- API·DB가 바뀔 때만: ### DB 변경, ### API 변경 (형식은 workflow:db-design, workflow:api-design skill의 결과 형식) -->
 
 ## 5. 작업 항목
 
@@ -324,7 +334,7 @@ engineering plugin 유무와 상관없이, API나 DB가 바뀌는 계획이면 4
 - Phase 수 / 작업항목 수 / 완료 기준 수, `(단독 커밋)` 항목
 - 선택한 설계안과 선택하지 않은 안 (설계안 비교를 건너뛰었으면 그 이유)
 - 사용자 확인으로 확정한 결정 사항 요약
-- 참고한 engineering skill (부르지 않았으면 생략)
+- 참고한 skill (`workflow:db-design`·`workflow:api-design`, engineering skill. 부르지 않았으면 생략)
 - 범위가 크거나 복잡하면(예: `코드 정리 및 리뷰` Phase를 빼고 Phase 3개 이상 또는 작업항목 10개 이상, 여러 모듈에 걸친 변경) `/workflow:workflow-plan-review @<계획서 경로>` 실행을 권장한다.
 - 구현은 `/workflow:workflow-do @<계획서 경로>`로 시작한다고 안내한다.
 - 화면으로 검증할 항목이 있으면 `/workflow:workflow-usecase-plan @<계획서 경로>` 실행을 안내한다.
