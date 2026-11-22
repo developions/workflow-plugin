@@ -191,7 +191,7 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 | `environment.local.yaml` | 제외 | 개인 PC에서만 다른 값(포트 등). 같은 키만 덮어쓴다 |
 | `accounts.yaml` | 제외 | 환경·역할별 실제 아이디·비밀번호 |
 
-- `workflow-usecase-plan`이 `environment.yaml`이 없을 때 처음 한 번 코드와 질문으로 만들고, 두 개인 파일을 `.gitignore`에 넣는다. 이후에는 URL·계정을 다시 묻지 않는다. `accounts.yaml`은 읽지 않는다.
+- `workflow-usecase-plan`이 `environment.yaml`이 없을 때 처음 한 번 코드와 질문으로 만들고, 두 개인 파일을 전용 무시 파일 `ai-work/usecase-env/.gitignore`에 넣는다. 이후에는 URL·계정을 다시 묻지 않는다. `accounts.yaml`은 읽지 않는다.
 - `workflow-usecase-do`는 두 파일을 합쳐 환경을 정하고, `health` URL로 서버를 확인한다. 떠 있지 않으면 `start` 명령으로 띄울지 묻는다.
 - `accounts.yaml`이 없으면 `workflow-usecase-do`가 역할 키만 있는 뼈대를 만든다. 값은 사용자가 파일에 직접 채운다. (비밀번호를 대화창으로 받지 않는다)
 - usecase의 `login` 단계는 `environment.yaml`의 공통 로그인 절차를 그 역할의 계정으로 실행한다. UC마다 로그인 단계를 풀어 쓰지 않는다.
@@ -224,15 +224,17 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 
 - 로드맵·작업계획서·usecase 계획서(`ai-work/roadmaps`, `ai-work/plans`, `ai-work/usecases`의 `.md`)는 커밋 대상이다. 커맨드는 이 파일들을 `.gitignore`에 넣지 않는다.
 - 커밋은 계획서 상단 표의 `커밋 방식`을 따른다. `workflow-plan`·`workflow-roadmap`은 묻지 않고 `자동`으로 쓰고, 이후 모든 커맨드가 이 값을 쓴다.
-  - `자동`(기본): 작업 브랜치에서는 아래 시점마다 묻지 않고 커밋하고 `커밋 <해시> <제목>` 한 줄로 알린다. 작업 브랜치가 기본 브랜치(main/master/develop 등)일 때만 묻는다.
+  - `자동`(기본): 작업 브랜치에서는 아래 시점마다 묻지 않고 커밋하고 `커밋 <해시> <제목>` 한 줄로 알린다. 작업 브랜치가 기본 브랜치일 때와, usecase를 작업 브랜치가 아닌 곳에서 실행했을 때만 묻는다.
+  - 기본 브랜치는 `origin/HEAD`가 가리키는 브랜치(없으면 로컬 `main` → `master` → `develop` 중 처음 있는 것)와, 있으면 `develop`이다. 모든 커맨드가 같은 기준을 쓴다. 기본 브랜치에서 `브랜치 생성 안 함`을 고르면 커밋마다 질문이 생기므로, `workflow-plan`·`workflow-roadmap`은 새 브랜치를 추천한다.
   - `확인`: 시점마다 묻는다. `커밋 방식` 행이 없는 예전 계획서도 `확인`으로 동작한다.
   - `끝에 한꺼번에`: 각 커맨드가 끝날 때만 묻는다.
   - `자동`이면 작업 브랜치에서 예외 상황도 묻지 않고 처리한 뒤 한 줄로 알리고 완료 보고에 적는다.
     - 검증이 끝나지 않은(`[~]`) 변경이나 뒤 항목에 맡긴 테스트 실패가 남아 있으면 커밋을 다음 시점으로 미룬다. (종료 처리에서는 커밋하지 않는다)
     - 비밀값 파일로 보이는 파일은 빼고 커밋한다.
-    - `workflow-do` 시작 전부터 미커밋 변경이 있던 파일을 이번 작업에서도 고쳤으면 그 파일만 빼고 커밋한다. (사용자가 확인한 뒤 직접 커밋한다) 문서 커맨드(plan-review, usecase, roadmap)는 계획서·문서의 실행 전 변경은 함께 커밋하고, `.gitignore`·`environment.yaml`은 뺀다.
+    - `workflow-do` 시작 전부터 미커밋 변경이 있던 파일을 이번 작업에서도 고쳤으면 그 파일만 빼고 커밋한다. (사용자가 확인한 뒤 직접 커밋한다) 그 때문에 코드가 빠진 항목은 커밋 메시지와 계획서 이력에 `미커밋`으로 남는다. 문서 커맨드(plan-review, usecase, roadmap)는 계획서·문서의 실행 전 변경은 함께 커밋하고(알리는 줄과 이력에 남긴다), `workflow-usecase-plan`은 `environment.yaml`의 실행 전 변경만 뺀다.
+    - `workflow-do`는 종료할 때 커밋하지 않고 남긴 파일을 `do 종료` 행에 `미커밋:`으로 적는다. 다음 실행은 그 목록의 파일만 이전 실행의 변경으로 보고 묻지 않고 커밋한다. 목록에 없는 변경은 이 계획의 파일이어도 사용자 변경일 수 있으므로 묻는다.
     - 커밋 훅이 실패하면 고칠 수 있을 때 고쳐 한 번 다시 커밋하고, 안 되면 커밋하지 않고 계속한다. (`--no-verify`로 우회하지 않는다)
-  - usecase를 작업 브랜치가 아닌 곳에서 실행했을 때는 `자동`이어도 묻는다.
+  - 알리는 줄은 모든 커맨드가 같은 형식이다: `커밋 <해시> <제목> (제외: <파일>) (실행 전 변경 포함: <파일>)`, `커밋 미룸 — <사유>`, `커밋 안 함 — <사유>`.
   - 바꾸려면 `workflow-plan`이나 `workflow-do`에 추가 지시로 준다. (예: `/workflow:workflow-do @<계획서> 커밋 방식을 확인으로 바꿔줘`)
 - 그 커맨드가 만들거나 고친 파일만 스테이징하고(`git add -A` 쓰지 않음), push는 하지 않는다. 프로젝트 규칙(CLAUDE.md 등)에 커밋 형식이 있으면 그것을 따르고, 없으면 본문 끝에 `Plan: <계획서 경로>`를 붙인다.
 
@@ -245,8 +247,8 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 | `(단독 커밋)` 항목 완료 | `workflow-do` | 그 항목의 소스 + 계획서 (DB 마이그레이션, 파일 삭제 등) |
 | `/simplify`, `/code-review` 반영 각각 | `workflow-do` | 정리·리뷰 반영 소스 + 계획서 |
 | 종료 처리 | `workflow-do` | 아직 커밋하지 않은 이번 실행의 변경 (`do 종료` 기록, 완료 기준 확인, 로드맵 README 상태 등). 이번 실행의 마지막 커밋 시점이 종료 바로 앞이면 그 커밋을 여기로 미뤄 `do 종료` 기록과 한 커밋으로 한다 |
-| usecase 작성 후 | `workflow-usecase-plan` | usecase 문서 + 원본 계획서 (+ 처음 만든 `environment.yaml`, `.gitignore`) |
-| usecase 실행 후 | `workflow-usecase-do` | usecase 문서 + 원본 계획서 (+ 로드맵 README) + `.gitignore` (브랜치 불일치면 커밋하지 않는 것을 추천) |
+| usecase 작성 후 | `workflow-usecase-plan` | usecase 문서 + 원본 계획서 (+ 만들거나 고친 `environment.yaml`, 전용 무시 파일 `ai-work/usecase-env/.gitignore`) |
+| usecase 실행 후 | `workflow-usecase-do` | usecase 문서 + 원본 계획서 (+ 로드맵 README, 만들거나 줄을 더한 전용 무시 파일 `ai-work/usecases/.gitignore`·`ai-work/usecase-env/.gitignore`) (브랜치 불일치면 묻고, 커밋하지 않는 것을 추천) |
 
 - Phase는 커밋 단위이므로 `workflow-plan`은 Phase가 끝났을 때 빌드·테스트가 통과하도록 나누고, 되돌리기 어려운 항목에 `(단독 커밋)`을 붙인다.
 - `확인` 방식의 커밋 질문에서 `이번 실행은 끝에 한꺼번에`를 고르면 그 실행에서는 종료 처리에서만 묻는다. `workflow-do` 시작 전부터 있던 미커밋 변경은 커밋에 넣지 않는다.
@@ -263,7 +265,7 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 
   그래도 승인을 자주 물으면 `/fewer-permission-prompts`로 실제로 자주 쓰인 명령을 허용 목록에 넣는다. `workflow-do`는 항목마다 진행 표시 확인 스크립트(`bash …/plan-progress.sh`)도 실행하므로, 이 명령의 승인이 반복될 때도 같은 방법을 쓴다.
 - `/simplify`·`/code-review`는 Phase마다 커밋해도 이번 작업 전체를 보도록 첫 `do 시작` 행의 기준 커밋 이후 변경을 대상으로 한다.
-- 스크린샷 증적 폴더는 git에서 제외한다. `workflow-usecase-do`가 증적 폴더를 만들 때 `.gitignore`에 `ai-work/**/*_evidence/` 줄이 없으면 추가한다.
+- 스크린샷 증적 폴더는 git에서 제외한다. `workflow-usecase-do`가 증적 폴더를 만들 때 무시되지 않으면 전용 무시 파일 `ai-work/usecases/.gitignore`에 `*_evidence/` 줄을 추가한다. 개인 파일(`environment.local.yaml`, `accounts.yaml`)은 `ai-work/usecase-env/.gitignore`에 넣는다. 저장소 루트의 `.gitignore`는 고치지 않는다. (사용자가 고쳐 둔 루트 `.gitignore`와 섞이면 무시 줄을 커밋할 수 없기 때문이다) Playwright MCP가 만드는 `.playwright-mcp/`는 PC마다 생기는 도구 파일이라 `.git/info/exclude`에 넣는다.
 
 ## 상태 표기
 
