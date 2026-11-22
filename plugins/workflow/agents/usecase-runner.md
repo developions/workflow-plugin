@@ -18,6 +18,7 @@ description: workflow-usecase-do 커맨드가 usecase 계획서의 UC 하나를 
 - 증적 디렉토리 (프로젝트 루트 기준 상대경로와 절대경로)
 - 스크린샷 경로 방식: `상대` / `절대` / `옮김` / `미확인`
 - 사용자 지시: 앞서 `확인 필요`로 돌려준 사항에 대한 답 (단계 ID와 지시)
+- 앞 UC 끝의 console error 수: 앞 UC가 끝날 때 `browser_console_messages`(`level: error`, `all: true`)의 전체 수. 첫 UC는 부른 쪽이 준비 때 조회한 기준값이다. 이보다 뒤에 쌓인 error가 이 UC의 것이다
 - 실행 승인된 단계 ID: 되돌리기 어려운 동작인데 사용자가 실행을 허락한 단계
 - 실행하지 않을 단계 ID: 되돌리기 어려운 동작이라 사용자가 실행하지 않기로 한 단계. `단계 실행`의 `실행하지 않을 단계` 규칙대로 그 단계(확인 창 `dialog`면 창을 띄우는 앞 단계)부터 실행하지 않고 이 UC를 끝낸다. 결과에 `실행하지 않음: <단계 ID>`를 적는다
 
@@ -62,6 +63,7 @@ description: workflow-usecase-do 커맨드가 usecase 계획서의 UC 하나를 
    - `upload`: 파일 경로를 절대경로로 바꿔 넘긴다.
    - `wait`: 대기 시간은 최대 30초다.
    - `network`: `filter`로 URL을 좁혀 조회한다. 요청 뒤에 페이지가 이동했으면 `all: true`로 조회한다. 기대한 요청이 아직 없거나 건수가 모자라면(응답이 오기 전일 수 있다) `browser_wait_for`로 1~2초 기다린 뒤 한 번 더 조회하고 그 결과로 판단한다. 기대결과가 `요청 N건`이면 그 UC에서 지금 화면에 들어온 뒤의 요청을 센다.
+   - `console`: `browser_console_messages`를 `level: error`, `all: true`로 조회해, 입력의 `앞 UC 끝의 console error 수`보다 뒤에 쌓인 것(이 UC의 error)만 본다. 그중 아래 `UC를 마칠 때` 1번의 `(기대한 응답)`·`(브라우저 자동 요청)`에 해당하는 것은 빼고 기대결과(`error 없음` 등)를 판정한다. 브라우저는 설계대로 받은 4xx와 `/favicon.ico` 404도 error로 남기므로, 빼지 않으면 정상 동작이 실패가 된다. 뺀 것이 있으면 통과여도 그 행에 `→ 실제: error 없음 (기대한 응답 N건 제외)`처럼 덧붙인다.
 4. 기대결과를 검증한다. (화면 텍스트, URL, network 응답, console 오류 등)
 5. 결과를 기록한다.
    - 통과: `[~]` → `[V]`
@@ -80,7 +82,7 @@ description: workflow-usecase-do 커맨드가 usecase 계획서의 UC 하나를 
 
 `확인 필요`·`실행 불가`로 멈출 때는 하지 않는다.
 
-1. `browser_console_messages`를 `level: error`, `all: true`로 조회한다. 결과에는 error 전체 수와 마지막 10건을 한 줄씩(길면 앞부분만) 적는다. 새로 생긴 것인지는 부른 쪽이 앞 UC 결과의 수와 비교해 판단한다.
+1. `browser_console_messages`를 `level: error`, `all: true`로 조회한다. 결과에는 error 전체 수와, 입력의 `앞 UC 끝의 console error 수`보다 뒤에 쌓인 것(이 UC의 error)을 한 줄씩(길면 앞부분만, 최대 10건) 적는다. 앞 UC 때 생긴 error는 적지 않는다. (다른 UC의 단계가 기대한 응답인지 이 UC는 판단할 수 없어, 다시 적으면 표시가 붙기도 빠지기도 한다) 앞 UC 끝의 수를 받지 못했으면 마지막 10건을 적고, 부른 쪽이 앞 UC 결과의 수와 비교해 판단한다.
    - 응답 상태 오류(`Failed to load resource: … status of 401` 등)는 URL과 상태 코드를 함께 적는다. (메시지에 URL이 없으면 `browser_network_requests`에서 같은 상태 코드의 요청을 찾는다) 이 UC의 단계가 그 응답을 기대했으면(`network` 단계의 기대 상태 코드, 기대결과에 적힌 오류 응답. 예: 잠금 상태 로그인의 `423`) 줄 끝에 `(기대한 응답)`을 붙인다. usecase 계획서 `1. 사전 조건`의 `기대한 응답`에 적힌 요청(같은 메서드·경로·상태 코드)도 같이 붙인다. 브라우저는 일부러 받은 4xx도 error로 남기기 때문이다.
    - 브라우저가 스스로 보내는 요청(`/favicon.ico`)의 404는 줄 끝에 `(브라우저 자동 요청)`을 붙인다. 화면 코드가 부른 요청이 아니다.
 2. 현재 시각(Bash `date '+%Y-%m-%d %H:%M:%S'`)으로 상단 표의 `최종 갱신`을 고친다.
@@ -97,7 +99,7 @@ UC: UC-02 (실행한 단계: 02-01~02-05)
 단계: 통과 3, 실패 1, 미실행 1
 실행하지 않음: 02-06 (실행하지 않을 단계, 이후 단계 미실행)
 스크린샷 경로 방식: 상대 | 절대
-console error: 전체 1건 (마지막 5건)
+console error: 전체 4건, 이 UC 1건
 - TypeError: Cannot read properties of undefined (reading 'id') (main.js:120)
 
 실패
