@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "로드맵 작성, 작업계획서 생성/리뷰/구현 및 Playwright MCP 기반 usecase 계획·실행 워크플로우",
-    "version": "1.4.0"
+    "version": "1.4.1"
   },
   "plugins": [
     {
       "name": "workflow",
       "source": "./plugins/workflow",
       "description": "workflow-roadmap / workflow-plan / workflow-plan-review / workflow-do / workflow-usecase-plan / workflow-usecase-do / workflow-status 커맨드, db-design / api-design / ui-design skill, usecase-runner · item-implementer agent 제공",
-      "version": "1.4.0"
+      "version": "1.4.1"
     }
   ]
 }
