@@ -1,6 +1,6 @@
 {
   "name": "workflow",
-  "version": "1.5.6",
+  "version": "1.5.7",
   "description": "큰 작업 로드맵, 요구사항 → 작업계획서 생성, 계획서 리뷰, 구현, Playwright MCP usecase 계획·실행, 진행 현황 커맨드와 DB·API·화면 설계 skill, usecase 실행·병렬 구현 agent",
   "keywords": ["workflow", "roadmap", "plan", "usecase", "playwright", "db-design", "api-design", "ui-design"]
 }
