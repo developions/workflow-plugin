@@ -1,6 +1,6 @@
 # workflow plugin
 
-작업계획서 생성 → 리뷰 → 구현 → Playwright MCP usecase 계획 → usecase 실행까지 이어지는 Claude Code 플러그인.
+작업계획서 생성 → 리뷰 → 구현 → Playwright MCP usecase 계획 → usecase 실행까지 이어지는 Claude Code 플러그인. 큰 작업은 로드맵으로 업무를 나눈 뒤 업무마다 이 흐름을 반복한다.
 
 ## 설치
 
@@ -49,12 +49,13 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
 
 | 커맨드 | 설명 | 산출물 |
 |--------|------|--------|
-| `/workflow:workflow-plan <요구사항>` | 요구사항 → 작업계획서 생성, git branch 추천/생성 | `ai-work/plans/YYMMDD/HHMISS_[summary].md` |
+| `/workflow:workflow-roadmap <요구사항>` | 큰 작업(프로젝트 생성·스캐폴드·여러 기능)을 업무로 나눈 로드맵 생성·수정·현황. 로드맵 브랜치 생성 | `ai-work/roadmaps/YYMMDD_[summary]/README.md`, 업무 파일 `NN_[업무].md` |
+| `/workflow:workflow-plan <요구사항 \| @업무 파일>` | 요구사항 → 작업계획서 생성, git branch 추천/생성. 로드맵 업무 파일이면 로드맵 브랜치에서 그 업무의 계획서를 만든다 | `ai-work/plans/YYMMDD/HHMISS_[summary].md` |
 | `/workflow:workflow-plan-review @<계획서>` | 범위가 크거나 복잡한 계획서 리뷰·보완 | 계획서에 리뷰 결과 반영 |
 | `/workflow:workflow-do @<계획서> [항목 ID 또는 Phase]` | 계획서 기준으로 구현(코딩), 항목마다 진행 상황 갱신 | 소스 변경, 계획서 진행률 갱신 |
 | `/workflow:workflow-usecase-plan @<계획서>` | Playwright MCP용 usecase 계획서 생성 | `ai-work/usecases/YYMMDD/HHMISS_[summary].md` |
 | `/workflow:workflow-usecase-do @<usecase> [UC-01,...]` | usecase를 Playwright MCP로 실행하고 결과 체크 | usecase 계획서 갱신, `<usecase 파일명>_evidence/<실행 YYMMDD_HHMISS>/` 증적 |
-| `/workflow:workflow-status [@<계획서> \| all]` | 계획서·usecase 진행 현황(브랜치, 진행률, 진행중·미결 항목)과 다음에 실행할 커맨드. 다른 브랜치의 계획서도 브랜치를 바꾸지 않고 읽는다 | 없음 (읽기 전용) |
+| `/workflow:workflow-status [@<계획서> \| all]` | 로드맵·계획서·usecase 진행 현황(브랜치, 진행률, 진행중·미결 항목)과 다음에 실행할 커맨드. 다른 브랜치의 계획서도 브랜치를 바꾸지 않고 읽는다 | 없음 (읽기 전용) |
 
 ## skill
 
@@ -116,6 +117,7 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
 
 | 파일 | 설명 | 쓰는 곳 |
 |------|------|---------|
+| `templates/roadmap-template.md`, `templates/roadmap-item-template.md` | 로드맵 README(`로드맵 관리 규칙`·`결정 · 이력 기록 규칙` 블록 포함)와 업무 파일 템플릿 | `workflow-roadmap`(작성·규칙 블록 갱신) |
 | `templates/plan-template.md` | 작업계획서 템플릿 (`진행 관리 규칙`·`결정 · 이력 기록 규칙` 블록 포함) | `workflow-plan`(작성), `workflow-do`·`workflow-plan-review`(예전 형식 계획서 올리기) |
 | `scripts/plan-progress.sh` | 체크 표기를 세어 진행률·진행률 바·작업상태·Phase/UC 제목이 맞는지 확인한다. 다른 곳만 `적힌 값 → 맞는 값`으로 출력한다. 기본은 파일을 고치지 않고, `--fix`를 주면 그 값으로 고친다 (체크 표기의 상태와 `최종 갱신`은 고치지 않음. 종료 코드 1은 실행 오류일 때만) | 계획서를 고치는 커맨드 모두와 `usecase-runner` (`진행 표시 확인`), `workflow-status`(현황 조회) |
 
@@ -128,12 +130,36 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
 ## 흐름
 
 ```
+(큰 작업이면) workflow-roadmap ─▶ 업무마다 아래 흐름 반복
+
 workflow-plan ─▶ (복잡하면) workflow-plan-review ─▶ workflow-do ─▶ workflow-usecase-plan ─▶ workflow-usecase-do
                                                      ▲                                          │
                                                      └──────────── 실패 시 수정 후 재실행 ─────────┘
 ```
 
 - 어디까지 했는지 모르겠으면 언제든 `/workflow:workflow-status`로 계획서별 진행 현황과 다음 커맨드를 본다.
+
+## 로드맵 (큰 작업)
+
+프로젝트 생성·스캐폴드·로그인·회원 관리처럼 계획서 하나에 담기 어려운 작업은 `workflow-roadmap`으로 업무를 나눈다.
+
+```
+/workflow:workflow-roadmap @docs/requirements/v1.md      # 로드맵 생성 (업무 분할·브랜치·커밋 방식 확인)
+/workflow:workflow-plan @ai-work/roadmaps/261123_v1/01_scaffold.md
+/workflow:workflow-do @<계획서>                           # 완료되면 로드맵 README의 업무가 완료로 바뀐다
+/clear
+/workflow:workflow-roadmap @ai-work/roadmaps/261123_v1/README.md   # 현황과 다음 업무
+/workflow:workflow-plan @ai-work/roadmaps/261123_v1/02_login.md
+...
+```
+
+- **로드맵은 요구사항과 순서만 다룬다.** 업무 분할, 선행 관계, 여러 업무가 따르는 공통 결정, 업무 간 약속(한 업무가 만들고 다른 업무가 쓰는 테이블·API·세션 값의 이름과 핵심 내용)만 정한다. 설계안 비교, DB·API·화면 정의, 작업항목은 업무마다 `workflow-plan`이 실제 코드를 보고 정한다. 앞 업무를 구현한 뒤 뒤 업무를 계획해야 계획이 코드와 맞기 때문이다.
+- **업무 하나 = 업무 파일 하나 = 계획서 하나.** 업무는 계획서 하나 크기(Phase 2~4개, 작업항목 약 15개 이하)이고, 기능 단위로 나눈다. (계층별로 나누면 마지막 업무까지 검증할 기능이 없다) 첫 업무는 뼈대(프로젝트 생성, 빌드, DB 연결, 공통 오류 처리)이고, 요구 항목에 공통 규칙을 CLAUDE.md에 정리하는 것이 들어간다. 뒤 업무의 `workflow-plan`이 CLAUDE.md를 따른다.
+- **브랜치**: `workflow-roadmap`이 로드맵을 만들 때 브랜치명을 추천해 로드맵 브랜치를 만든다. 업무 계획서는 모두 이 브랜치에서 진행하고, `workflow-plan`은 로드맵 업무 계획서에서 브랜치·커밋 방식을 묻지 않고 로드맵 README의 값을 쓴다. 로드맵 수정은 현재 브랜치에서 하고 커밋한다.
+- **업무 상태**: `workflow-plan`이 계획서를 만들면 README 업무 행에 계획서 경로와 `진행`을, `workflow-do` 종료 처리(또는 `workflow-usecase-do`의 원본 계획서 반영)가 계획서를 `완료`로 만들면 `완료`를 쓴다. 규칙은 README의 `로드맵 관리 규칙` 블록에 있고, 세 커맨드가 그 블록을 따른다. 어긋나면 `workflow-roadmap @<README>`(현황)가 바로잡는다.
+- 계획서와 업무는 계획서 `### 요구사항 문서`에 적힌 업무 파일 경로로 이어진다. `workflow-plan`은 업무 파일의 `## 요구 항목`만 요구사항 문서로 옮기고, `이 업무가 기대는 것`·`다른 업무에 넘길 것`·`정하지 않은 것`은 설계 근거로 읽는다.
+- 이미 계획서가 있는 업무의 요구를 바꾸면 계획서는 따라 바뀌지 않는다. `workflow-roadmap`이 `/workflow:workflow-do @<계획서> <변경 내용>`으로 반영하라고 안내한다. `진행`·`완료` 업무는 분할·병합·취소하지 않고 새 업무로 추가한다.
+- `workflow-status`는 로드맵 표(업무 완료/진행/대기 수, 다음 업무)를 계획서 표 위에 보여 준다.
 
 - `workflow-do`는 구현 전에 계획서의 미결 사항(`(미결)` 표시, 비어 있거나 `미정`·`보류`인 결정, 조치가 `미결`인 리뷰 지적 등)을 찾아 AskUserQuestion으로 확정하고 계획서를 고친 뒤 진행한다. 보류한 사항에 걸린 항목은 그 실행에서 건너뛴다.
 - `workflow-plan`은 같은 Phase에서 서로 의존하지 않고 고칠 파일이 겹치지 않는 복잡도 `중` 이상 항목을 `(병렬 A)`로 묶고, 항목 아래에 `파일:`·`복잡도:` 줄을 단다. 복잡도는 파일 수가 아니라 새 로직과 탐색량으로 정한다. (상·중·하, 기준은 `workflow-plan`의 `복잡도`) `workflow-do`는 그 그룹을 `item-implementer` agent로 동시에 구현한다. 조건이 깨지면(진행 범위가 그룹 일부만, 보류에 걸림, agent 없음 등) 순서대로 구현한다. 표시가 없는 예전 계획서도 그대로 순서대로 동작한다. agent는 맥락을 다시 읽는 출발 비용(작은 항목에도 1~2분)이 있어, 작은 항목은 메인에서 순서대로 하는 편이 빠르다.
@@ -195,7 +221,7 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 
 ## git 처리
 
-- 작업계획서와 usecase 계획서(`ai-work/plans`, `ai-work/usecases`의 `.md`)는 커밋 대상이다. 커맨드는 이 파일들을 `.gitignore`에 넣지 않는다.
+- 로드맵·작업계획서·usecase 계획서(`ai-work/roadmaps`, `ai-work/plans`, `ai-work/usecases`의 `.md`)는 커밋 대상이다. 커맨드는 이 파일들을 `.gitignore`에 넣지 않는다.
 - 커밋은 계획서 상단 표의 `커밋 방식`을 따른다. `workflow-plan`이 브랜치 질문과 함께 한 번 묻고, 이후 모든 커맨드가 이 값을 쓴다.
   - `자동`(추천): 아래 시점마다 묻지 않고 커밋하고 `커밋 <해시> <제목>` 한 줄로 알린다.
   - `확인`: 시점마다 묻는다. `커밋 방식` 행이 없는 예전 계획서도 `확인`으로 동작한다.
@@ -206,14 +232,15 @@ URL·서버 기동·로그인 절차·계정은 usecase 문서에 쓰지 않고 
 
 | 시점 | 커맨드 | 커밋 내용 |
 |------|--------|-----------|
-| 계획서 작성 후 | `workflow-plan` | 계획서 |
+| 로드맵 작성·수정 후 | `workflow-roadmap` | 로드맵 README + 업무 파일 |
+| 계획서 작성 후 | `workflow-plan` | 계획서 (로드맵 업무면 + 로드맵 README) |
 | 리뷰 반영 후 | `workflow-plan-review` | 계획서 |
 | Phase 완료 | `workflow-do` | 그 Phase의 소스 + 계획서 |
 | `(단독 커밋)` 항목 완료 | `workflow-do` | 그 항목의 소스 + 계획서 (DB 마이그레이션, 파일 삭제 등) |
 | `/simplify`, `/code-review` 반영 각각 | `workflow-do` | 정리·리뷰 반영 소스 + 계획서 |
-| 종료 처리 | `workflow-do` | 아직 커밋하지 않은 이번 실행의 변경 (`do 종료` 기록, 완료 기준 확인 등). 이번 실행의 마지막 커밋 시점이 종료 바로 앞이면 그 커밋을 여기로 미뤄 `do 종료` 기록과 한 커밋으로 한다 |
+| 종료 처리 | `workflow-do` | 아직 커밋하지 않은 이번 실행의 변경 (`do 종료` 기록, 완료 기준 확인, 로드맵 README 상태 등). 이번 실행의 마지막 커밋 시점이 종료 바로 앞이면 그 커밋을 여기로 미뤄 `do 종료` 기록과 한 커밋으로 한다 |
 | usecase 작성 후 | `workflow-usecase-plan` | usecase 문서 + 원본 계획서 (+ 처음 만든 `environment.yaml`, `.gitignore`) |
-| usecase 실행 후 | `workflow-usecase-do` | usecase 문서 + 원본 계획서 + `.gitignore` (브랜치 불일치면 커밋하지 않는 것을 추천) |
+| usecase 실행 후 | `workflow-usecase-do` | usecase 문서 + 원본 계획서 (+ 로드맵 README) + `.gitignore` (브랜치 불일치면 커밋하지 않는 것을 추천) |
 
 - Phase는 커밋 단위이므로 `workflow-plan`은 Phase가 끝났을 때 빌드·테스트가 통과하도록 나누고, 되돌리기 어려운 항목에 `(단독 커밋)`을 붙인다.
 - `확인` 방식의 커밋 질문에서 `이번 실행은 끝에 한꺼번에`를 고르면 그 실행에서는 종료 처리에서만 묻는다. `workflow-do` 시작 전부터 있던 미커밋 변경은 커밋에 넣지 않는다.
