@@ -80,7 +80,8 @@ description: workflow-usecase-do 커맨드가 usecase 계획서의 UC 하나를 
 
 `확인 필요`·`실행 불가`로 멈출 때는 하지 않는다.
 
-1. `browser_console_messages`를 `level: error`, `all: true`로 조회한다. 결과에는 error 전체 수와 마지막 5건을 한 줄씩(길면 앞부분만) 적는다. 새로 생긴 것인지는 부른 쪽이 앞 UC 결과의 수와 비교해 판단한다.
+1. `browser_console_messages`를 `level: error`, `all: true`로 조회한다. 결과에는 error 전체 수와 마지막 10건을 한 줄씩(길면 앞부분만) 적는다. 새로 생긴 것인지는 부른 쪽이 앞 UC 결과의 수와 비교해 판단한다.
+   - 응답 상태 오류(`Failed to load resource: … status of 401` 등)는 URL과 상태 코드를 함께 적는다. (메시지에 URL이 없으면 `browser_network_requests`에서 같은 상태 코드의 요청을 찾는다) 이 UC의 단계가 그 응답을 기대했으면(`network` 단계의 기대 상태 코드, 기대결과에 적힌 오류 응답. 예: 잠금 상태 로그인의 `423`) 줄 끝에 `(기대한 응답)`을 붙인다. 브라우저는 일부러 받은 4xx도 error로 남기기 때문이다.
 2. 현재 시각(Bash `date '+%Y-%m-%d %H:%M:%S'`)으로 상단 표의 `최종 갱신`을 고친다.
 3. Bash 도구로 `bash "${CLAUDE_PLUGIN_ROOT}/scripts/plan-progress.sh" --fix "<usecase 계획서 경로>"`를 실행한다. 스크립트가 전체진행률·진행률 바·UC 제목을 고친다. usecase 계획서의 작업상태는 스크립트가 고치지 않는다. (부른 쪽이 정한다) 스크립트를 실행할 수 없으면 전체진행률·진행률 바·이 UC 제목을 직접 세어 고친다.
    - `확인 필요`·`실행 불가`로 멈출 때는 이 절을 하지 않으므로, 그때의 진행 표시는 부른 쪽이 고친다.
