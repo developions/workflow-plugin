@@ -43,7 +43,7 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
    - marketplace 업데이트 결과에 `1 plugin bumped`가 나오면 새 버전을 받은 것이다. 나오지 않으면 `/plugin update workflow@workspace-workflow`를 실행한다.
 4. 새 버전이 설치됐는지 확인하려면 `~/.claude/plugins/cache/workspace-workflow/workflow/` 아래에 새 버전 폴더가 생겼는지 본다. `~/.claude/plugins/marketplaces/workspace-workflow/`는 marketplace 저장소의 사본일 뿐, 실제로 실행되는 설치본이 아니다.
 - `workflow-usecase-do`는 Playwright MCP가 설치되어 있어야 한다.
-- 커맨드는 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다) skill 세 개(`db-design`, `api-design`, `ui-design`)는 예외다. 커맨드가 Skill 도구로 불러야 하므로 Claude가 부를 수 있게 열어 두었다. (아래 `skill` 참고)
+- 커맨드는 모두 `/`로 직접 입력했을 때만 실행된다. (`disable-model-invocation: true` — Claude가 대화 맥락만 보고 스스로 실행하지 않는다) skill 네 개(`db-design`, `api-design`, `ui-design`, `codex-review`)는 예외다. 커맨드가 Skill 도구로 불러야 하므로 Claude가 부를 수 있게 열어 두었다. (아래 `skill` 참고)
 
 ## 커맨드
 
@@ -64,6 +64,7 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
 | `workflow:db-design` | DB 변경(테이블·컬럼·제약·인덱스·마이그레이션)을 설계·점검하는 기준과 `### DB 변경` 형식 | `workflow-plan`(설계), `workflow-plan-review`(점검 계획. 정의를 새로 쓰거나 다시 쓸 때 설계), `workflow-do`(점검 구현 — skill을 부르지 않고 `3. 점검 모드` 섹션만 읽는다. 설계 방향이 바뀔 때 설계) |
 | `workflow:api-design` | API 변경(엔드포인트·요청·응답·오류 코드·권한·하위 호환)을 설계·점검하는 기준과 `### API 변경` 형식 | 위와 같음 |
 | `workflow:ui-design` | 화면 변경(경로·요소·입력 검증·메시지·상태·권한별 노출·이동)을 설계·점검하는 기준과 `### 화면 변경` 형식. 시각 디자인은 다루지 않는다 | 위와 같음. `workflow-usecase-plan`은 이 정의의 요소 이름·문구를 usecase 대상·기대결과로 쓴다 |
+| `workflow:codex-review` | Codex CLI로 작업계획서를 읽기 전용 교차 리뷰할지 묻는 기준과, 받은 지적을 확인해 리뷰에 합치는 기준. 실행 스크립트 `run.sh` 포함 | `workflow-plan-review` 2단계 (`codex` 명령이 있을 때만) |
 
 - skill은 기준과 형식만 준다. 파일을 쓰거나 커밋하지 않고, 커맨드가 불렀을 때는 사용자에게 직접 묻지 않는다. 미정 사항을 돌려주면 커맨드가 묻고 결정 사항에 기록한다.
 - 여럿이 함께 바뀌면 `db-design` → `api-design` → `ui-design` 순서로, 앞 정의를 가지고 다음 설계를 한다.
@@ -74,6 +75,14 @@ GitHub marketplace로 설치한 플러그인은 `~/.claude/plugins/cache/workspa
 - 관례가 없으면 기본값을 제안해 쓰고, 되돌리기 어렵거나 업무 규칙이거나 다른 팀에 영향을 주는 것만 미정 사항으로 묻는다.
 - 커맨드 없이도 쓸 수 있다. (`/workflow:db-design 설계`, `/workflow:api-design 점검 계획 @<계획서>`, `/workflow:ui-design 설계`, 또는 대화에서 DB·API·화면 설계를 요청) 이때는 결과를 대화에만 보여 준다.
 - skill을 쓸 수 없는 세션에서는 커맨드가 `${CLAUDE_PLUGIN_ROOT}/skills/<이름>/SKILL.md`를 직접 읽어 같은 기준으로 진행한다.
+
+### Codex 교차 리뷰 (`codex-review`)
+
+- [Codex CLI](https://github.com/openai/codex)가 설치되어 있으면 `workflow-plan-review`가 리뷰할 때마다 Codex에도 보낼지 묻는다. 기본은 `보내지 않음`이고, 이전 리뷰의 답을 다음 리뷰에 쓰지 않는다. 설치되어 있지 않으면 묻지 않는다.
+- 보내면 Codex가 저장소를 읽기 전용으로 열람해 계획서·요구사항 문서·관련 소스를 읽고 지적만 돌려준다. 그 내용은 Codex 설정의 모델 제공자(기본 OpenAI)로 전송되고, 사용자의 Codex 사용량을 쓴다. 읽기 범위는 지시로만 제한하므로 저장소의 다른 파일도 읽힐 수 있다.
+- Claude 리뷰와 동시에 돌고(2~3분), 받은 지적은 근거를 직접 확인한 뒤 중복·이미 정한 것을 빼고 리뷰에 합친다. 채택한 지적은 리뷰 결과 표에 `(Codex)`로 표시된다.
+- 계획서 리뷰에만 쓴다. 결함을 심은 계획서·코드로 잰 결과, 계획서 리뷰에서는 Claude가 반복해서 놓치는 유효 지적을 Codex가 보탰고 코드 diff 리뷰에서는 차이가 없었다.
+- 모델·추론 수준·시간 제한은 환경 변수로 바꾼다. `WORKFLOW_CODEX_MODEL`(기본 `gpt-6.2-astra`, 계정에서 쓸 수 없으면 Codex 설정의 기본 모델로 한 번 다시 실행, 빈 값이면 처음부터 기본 모델), `WORKFLOW_CODEX_EFFORT`(기본 `high`), `WORKFLOW_CODEX_TIMEOUT`(초, 기본 480)
 
 ## agent
 
