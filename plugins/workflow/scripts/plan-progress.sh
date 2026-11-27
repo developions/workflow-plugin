@@ -54,7 +54,8 @@ if [ "$fix" = 1 ]; then
   tmp=$(mktemp) || { echo "실행 오류: 임시 파일을 만들 수 없다"; exit 1; }
 fi
 
-awk -v BINMODE=3 -v kind="$kind" -v file="$file" -v fix="$fix" -v out="$tmp" '
+# 출력은 변수에 모았다가 파일을 고친 뒤에 낸다. 부른 쪽이 출력을 파이프로 잘라도(`| head` 등) 고친 내용이 남는다.
+msgs=$(awk -v BINMODE=3 -v kind="$kind" -v file="$file" -v fix="$fix" -v out="$tmp" '
 BEGIN { t = 0; v = 0; p = 0; x = 0; ng = 0; grp = 0; body = 0; nm = 0 }
 function trim(s) { sub(/^[ \t]+/, "", s); sub(/[ \t]+$/, "", s); return s }
 function cell(line,   s) { s = line; sub(/^\|[^|]*\|/, "", s); sub(/\|[ \t]*$/, "", s); return trim(s) }
@@ -175,11 +176,12 @@ END {
   for (i = 1; i <= n; i++) print "- " msg[i]
   exit 0
 }
-' "$file"
+' "$file")
 st=$?
 
 if [ -n "$tmp" ]; then
   if [ "$st" = 0 ] && [ -s "$tmp" ]; then cat "$tmp" > "$file"; fi
   rm -f "$tmp"
 fi
+printf '%s\n' "$msgs"
 exit "$st"
